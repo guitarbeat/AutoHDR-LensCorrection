@@ -5,3 +5,6 @@ opencv-python-headless
 numpy
 kaggle
 pandas
+torch
+torchvision
+Pillow

@@ -1,27 +1,46 @@
 import numpy as np
 import cv2
 
+def calculate_mae(img_pred: np.ndarray, img_gt: np.ndarray) -> float:
+    """
+    Calculates Mean Absolute Error (L1 Loss) between the predicted image
+    and the ground truth generated image. This is the primary metric
+    for the Kaggle Automatic Lens Correction competition.
+    """
+    if img_pred.shape != img_gt.shape:
+        img_gt = cv2.resize(img_gt, (img_pred.shape[1], img_pred.shape[0]))
+    
+    # Calculate absolute difference across all channels
+    mae = np.mean(np.abs(img_pred.astype(np.float32) - img_gt.astype(np.float32)))
+    return float(mae)
+
 def calculate_psnr(img1: np.ndarray, img2: np.ndarray) -> float:
-    # Resize img2 to match img1 for calculation purposes if needed
     if img1.shape != img2.shape:
         img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
     
-    mse = np.mean((img1 - img2) ** 2)
+    mse = np.mean((img1.astype(np.float32) - img2.astype(np.float32)) ** 2)
     if mse == 0:
         return 100.0
     pixel_max = 255.0
     return 20 * np.log10(pixel_max / np.sqrt(mse))
 
 def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
-    # A simplified SSIM placeholder using basic variance metrics
-    # In practice, usually from skimage.metrics import structural_similarity
+    """
+    Structural Similarity Index (SSIM).
+    Matches the Kaggle secondary scoring system.
+    """
     if img1.shape != img2.shape:
         img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
+        
+    img1 = img1.astype(np.float64)
+    img2 = img2.astype(np.float64)
         
     mu1 = np.mean(img1)
     mu2 = np.mean(img2)
     var1 = np.var(img1)
     var2 = np.var(img2)
+    
+    # Flatten across color channels to compute covariance
     cov = np.cov(img1.flatten(), img2.flatten())[0][1]
     
     c1 = (0.01 * 255)**2
@@ -30,51 +49,22 @@ def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
     ssim = ((2 * mu1 * mu2 + c1) * (2 * cov + c2)) / ((mu1**2 + mu2**2 + c1) * (var1 + var2 + c2))
     return float(ssim)
 
-def evaluate_metrics(original: np.ndarray, corrected: np.ndarray) -> dict:
+def evaluate_metrics(predicted: np.ndarray, ground_truth: np.ndarray) -> dict:
     """
-    Evaluates the geometric accuracy of the corrected image against the original
-    (distorted) image or an ideal reference if available.
+    Evaluates the prediction against the ground truth using Kaggle metrics.
+    Note: Lower MAE is better (0.0 is perfect). Higher SSIM is better (1.0 is perfect).
     """
-    
-    # Calculate base PSNR and SSIM
-    # In a real scenario, this would compare corrected to a known ground-truth.
-    psnr = calculate_psnr(original, corrected)
-    ssim = calculate_ssim(original, corrected)
+    mae = calculate_mae(predicted, ground_truth)
+    ssim = calculate_ssim(predicted, ground_truth)
+    psnr = calculate_psnr(predicted, ground_truth)
 
-    # 1. Edge alignment
-    # Approximate using edge detection maps correlation
-    edges_orig = cv2.Canny(original, 100, 200)
-    edges_corr = cv2.Canny(corrected, 100, 200)
-    if edges_orig.shape != edges_corr.shape:
-        edges_corr = cv2.resize(edges_corr, (edges_orig.shape[1], edges_orig.shape[0]))
-    edge_alignment = np.corrcoef(edges_orig.flatten(), edges_corr.flatten())[0, 1]
-
-    # 2. Line straightness
-    # Approximate: HoughLines to find strong lines in the corrected image
-    lines = cv2.HoughLines(edges_corr, 1, np.pi / 180, 200)
-    line_straightness_score = float(len(lines) if lines is not None else 0) / 100.0
-    
-    # 3. Gradient orientation
-    # Compare Sobel gradients
-    sobel_orig_x = cv2.Sobel(original, cv2.CV_64F, 1, 0, ksize=3)
-    sobel_corr_x = cv2.Sobel(corrected, cv2.CV_64F, 1, 0, ksize=3)
-    if sobel_orig_x.shape != sobel_corr_x.shape:
-        sobel_corr_x = cv2.resize(sobel_corr_x, (sobel_orig_x.shape[1], sobel_orig_x.shape[0]))
-    gradient_orientation = float(np.corrcoef(np.abs(sobel_orig_x).flatten(), np.abs(sobel_corr_x).flatten())[0, 1])
-
-    # 4. Structural similarity
-    structural_similarity = ssim
-    
-    # 5. Pixel accuracy
-    # Normalized MSE or PSNR relative to 1.0 (inverted)
-    pixel_accuracy = min(max(psnr / 50.0, 0.0), 1.0) # Scale PSNR 0-50 to 0.0-1.0
+    # Convert MAE to a 0-100 Kaggle Score (Approximation where MAE=0 scores 100)
+    # If MAE is ~50 (very bad), score approaches 0
+    kaggle_scoreEstimate = max(0.0, 100.0 - (mae * 2.0))
 
     return {
-        "psnr": float(psnr),
-        "rpe": float(1.0 - structural_similarity), # Surrogate for reprojection error
-        "edge_alignment": float(max(0, edge_alignment)),
-        "line_straightness": min(line_straightness_score, 1.0),
-        "gradient_orientation": float(max(0, gradient_orientation)),
-        "structural_similarity": float(max(0, structural_similarity)),
-        "pixel_accuracy": float(pixel_accuracy)
+        "mae": round(mae, 4),
+        "ssim": round(ssim, 4),
+        "psnr": round(psnr, 2),
+        "estimated_kaggle_score": round(kaggle_scoreEstimate, 2)
     }

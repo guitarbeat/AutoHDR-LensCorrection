@@ -14,28 +14,35 @@ class DistortionDetector(nn.Module):
     """
     def __init__(self, pretrained=True):
         super(DistortionDetector, self).__init__()
-        # Load a pretrained ResNet-18 model as the feature extractor
-        weights = models.ResNet18_Weights.DEFAULT if pretrained else None
-        self.backbone = models.resnet18(weights=weights)
+        # Load a pretrained Vision Transformer (ViT) as the feature extractor
+        weights = models.ViT_B_16_Weights.DEFAULT if pretrained else None
+        self.backbone = models.vit_b_16(weights=weights)
         
-        # Replace the final fully connected layer to output 5 parameters
-        # (k1, k2, k3, p1, p2) for the distortion model
-        num_ftrs = self.backbone.fc.in_features
-        self.backbone.fc = nn.Sequential(
-            nn.Linear(num_ftrs, 128),
+        # Replace the final classification head to output a flattened spatial
+        # displacement map (Flow Field).
+        # We need 2 coordinates (dx, dy) for every pixel in a downscaled grid.
+        # To keep it computationally feasible for the ViT head, we output a 
+        # 14x14 grid of flow vectors, which will be upsampled later.
+        # 14 * 14 * 2 = 392
+        num_ftrs = self.backbone.heads.head.in_features
+        self.backbone.heads.head = nn.Sequential(
+            nn.Linear(num_ftrs, 1024),
             nn.ReLU(),
             nn.Dropout(0.2),
-            nn.Linear(128, 5) # 5 distortion coefficients
+            nn.Linear(1024, 14 * 14 * 2) # Dense flow field
         )
         
     def forward(self, x):
         """
         Args:
-            x: Input image tensor of shape (B, 3, H, W)
+            x: Input image tensor of shape (B, 3, H, W). ViT expects 224x224.
         Returns:
-            Tensor of shape (B, 5) containing predicted distortion coefficients
+            Tensor of shape (B, 2, 14, 14) containing predicted flow vectors
+            for horizontal and vertical displacement.
         """
-        return self.backbone(x)
+        flat_flow = self.backbone(x)
+        # Reshape into a spatial grid: (Batch, Channels(2), Height(14), Width(14))
+        return flat_flow.view(-1, 2, 14, 14)
 
 # Example instantiation/dummy load
 def load_model(weights_path=None):

@@ -3,8 +3,8 @@ import os
 
 class HardwareManager:
     """
-    Manages hardware resource allocation specifically designed for the ASUS Ascent GX10
-    workstation with NVIDIA DGX Spark (tensors) and Arm CPU cores (I/O).
+    Manages hardware resource allocation specifically designed for prototyping on
+    Apple Silicon (M4) and scaling to GCP/Kaggle GPUs (CUDA).
     """
     def __init__(self):
         self.gpu_device = self._detect_gpu()
@@ -12,26 +12,26 @@ class HardwareManager:
         
     def _detect_gpu(self):
         """
-        Detects the best available tensor core device.
-        Prefers CUDA for NVIDIA DGX Spark, falls back to MPS for Apple Silicon,
+        Detects the best available tensor accelerator.
+        Prefers MPS for Apple Silicon prototyping, falls back to CUDA for GCP/Kaggle,
         then CPU if no hardware accelerators are available.
         """
-        if torch.cuda.is_available():
-            print(f"Accelerated hardware found: CUDA ({torch.cuda.get_device_name(0)})")
-            return torch.device('cuda')
-        elif torch.backends.mps.is_available():
+        if torch.backends.mps.is_available():
             print("Accelerated hardware found: Apple Silicon MPS")
             return torch.device('mps')
+        elif torch.cuda.is_available():
+            print(f"Accelerated hardware found: CUDA ({torch.cuda.get_device_name(0)})")
+            return torch.device('cuda')
         else:
             print("No accelerated hardware found. Falling back to CPU for tensor operations.")
             return torch.device('cpu')
             
     def get_tensor_device(self):
-        """Returns the device designated for heavy deep learning inference."""
+        """Returns the device designated for heavy deep learning inference (ViT)."""
         return self.gpu_device
         
     def get_io_device(self):
-        """Returns the device designated for lightweight parsing and EXIF extraction (Arm Cores)."""
+        """Returns the device designated for lightweight parsing and pre-processing."""
         return self.cpu_device
 
     def print_system_info(self):
