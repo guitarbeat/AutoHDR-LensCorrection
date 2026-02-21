@@ -21,3 +21,9 @@ Thumbs.db
 # Project specific
 .gemini/
 brain/
+
+# Kaggle credentials and data
+kaggle.json
+data/
+*.zip
+*.7z
