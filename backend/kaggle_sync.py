@@ -1,7 +1,7 @@
 import os
 import subprocess
 import logging
-from typing import List, Optional
+from typing import List
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
