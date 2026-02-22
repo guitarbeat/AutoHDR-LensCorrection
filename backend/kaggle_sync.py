@@ -71,9 +71,4 @@ def list_competition_files() -> List[str]:
         return []
 
 if __name__ == "__main__":
-    # Example usage:
-    # files = list_competition_files()
-    # if files:
-    #     print("Available files:", files)
-    #     # Example: download_competition_file("sample_submission.csv")
     pass
