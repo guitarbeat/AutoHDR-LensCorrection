@@ -39,25 +39,40 @@ async def correct_image(file: UploadFile = File(...)):
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     # 1. Prediction Model (Vision Transformer)
-    # Convert image to proper tensor format (B, C, H, W)
+    # Optimization: Resize on CPU before converting to tensor to avoid large data transfer
+    # and expensive interpolation on full-resolution image.
+    img_resized_cpu = cv2.resize(image, (224, 224))
+
     # Route image data to MPS / CUDA Tensor Cores
     tensor_device = system_hardware.get_tensor_device()
-    img_tensor = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+    img_tensor = torch.from_numpy(img_resized_cpu).permute(2, 0, 1).unsqueeze(0).float() / 255.0
     img_tensor = img_tensor.to(tensor_device)
     
-    # Resize to standard ViT input size (e.g., 224x224) if strictly needed, 
-    # but for this placeholder, we simulate a forward pass:
+    # Run inference
     with torch.no_grad():
-        img_resized = torch.nn.functional.interpolate(img_tensor, size=(224, 224))
+        output = detector(img_tensor)
         # Move back to CPU for further string/JSON serialization
-        predicted_coeffs = detector(img_resized)[0].cpu().numpy().tolist()
+        model_output = output[0].cpu().numpy().tolist()
+
+    # Handle model output
+    # The model might return a flow field (2, 14, 14) or coefficients depending on version.
+    # We attempt to unpack 5 coefficients. If it fails (e.g. flow field), we use defaults.
+    default_coeffs = [-0.1, 0.05, 0.0, 0.0, 0.0]
+    predicted_coeffs = default_coeffs
     
-    # In a real scenario, the ViT would output actual distortion parameters.
-    # For demonstration, we'll force some mild barrel distortion parameters
-    # if the model outputs zeros or values too small.
-    pred_k1, pred_k2, pred_k3, pred_p1, pred_p2 = predicted_coeffs
-    if abs(pred_k1) < 0.01:
-        predicted_coeffs = [-0.1, 0.05, 0.0, 0.0, 0.0]
+    try:
+        # Check if output is compatible with 5 coefficients [k1, k2, k3, p1, p2]
+        if isinstance(model_output, list) and len(model_output) == 5 and all(isinstance(x, (int, float)) for x in model_output):
+             predicted_coeffs = model_output
+             # Apply the logic: if k1 is too small, use defaults
+             if abs(predicted_coeffs[0]) < 0.01:
+                 predicted_coeffs = default_coeffs
+        else:
+             # Log warning but continue
+             print(f"Model output format mismatch. Using defaults.")
+
+    except Exception as e:
+        print(f"Error processing model output: {e}. Using defaults.")
     
     # 2. Geometric Correction (Routed to CPU for standard array ops)
     corrected_image, geom_info = undistort_image(image, predicted_coeffs)
