@@ -1,6 +1,6 @@
 # AutoHDR Competition Closeout Plan
 
-> **Last Updated (UTC/CST):** 2026-02-22 18:46:32 UTC | 2026-02-22 12:46:32 CST
+> **Last Updated (UTC/CST):** 2026-02-22 19:00:30 UTC | 2026-02-22 13:00:30 CST
 > **Canonical Ops Log:** `/Users/aaron/Desktop/AutoHDR/docs/ops/log.md`
 > **Real Submission Lineage:** `/Users/aaron/Desktop/AutoHDR/docs/ops/real_submission_lineage.md`
 > **Narrative Chronicle:** `/Users/aaron/Desktop/AutoHDR/docs/ops/journey_chronicle.md`
@@ -16,12 +16,16 @@ Anything submitted directly from score-space synthesis is a probe and must be ex
 ## Current Competition State
 
 1. `submission_constant100_20260222_174232.csv` is a probe submission and should be treated as invalid/non-legit pending organizer action.
+   As of `2026-02-22 19:00:30 UTC`, it still appears in Kaggle submissions and public leaderboard output.
 2. `submission_constant200_20260222_1747.csv` confirms out-of-range behavior (`>100` -> public `0.00000`).
 3. Best confirmed real zip-backed submissions currently visible are tied:
    - `submission_v4_oracle_valid_allzip_20260222_175058_scored_20260222_121503.csv` -> public `31.63214` (Kaggle UTC `2026-02-22 18:23:37.570000`).
    - `submission_v4_oracle_valid_allzip_failsafe8_20260222_122601_scored_20260222_122649.csv` -> public `31.63214` (Kaggle UTC `2026-02-22 18:37:46.543000`).
 4. Failsafe8 status: complete, lineage verified to ZIP:
    `/Volumes/Love SSD/AutoHDR_Submissions/submission_v4_oracle_valid_allzip_failsafe8_20260222_122601.zip`.
+5. Public leaderboard snapshot at `2026-02-22 19:00:30 UTC` shows:
+   - Team `Aaron Woods` score `100.00000` (probe-contaminated state),
+   - Team `Mirza Milan Farabi` also at `100.00000`.
 
 ## What Is Real vs Probe
 
@@ -41,12 +45,14 @@ Use `/Users/aaron/Desktop/AutoHDR/docs/ops/real_submission_lineage.md` as the so
 ## Final Window Checklist
 
 1. Confirm probe invalidation request status.
+   Status at `2026-02-22 19:00:30 UTC`: **pending** (probe entries still visible in Kaggle outputs).
 2. Keep one real zip-backed baseline pinned (`31.63214`) until a higher real zip-backed score lands.
 3. Submit only through the canonical real pipeline.
 4. Enforced submit guard: `/Users/aaron/Desktop/AutoHDR/backend/scripts/bounty_to_kaggle_submit.py` now blocks Kaggle submit unless ZIP lineage validates (`1000` JPGs + exact `image_id` set match) and scored CSV is consistent with bounty summary metadata/mean from the same run.
 5. `organize_real_chain` now recognizes timestamped scored filenames (for example `*_scored_YYYYMMDD_HHMMSS.csv`) and merges scored CSV discovery across both `/Users/aaron/Desktop/AutoHDR/backend/outputs/bounty` and `/Users/aaron/Desktop/AutoHDR/backend/outputs/kaggle`.
 6. `organize_real_chain --skip-kaggle` no longer requires `--kaggle-dir` to exist, enabling local-only reconciliation runs.
 7. Duplicate SHA guard in `/Users/aaron/Desktop/AutoHDR/backend/scripts/bounty_to_kaggle_submit.py` now keys off prior Kaggle submission metadata (not bounty request ID alone), so bounty-success/Kaggle-failed retries are not blocked.
+8. Kaggle naming safety policy is now enforced in `/Users/aaron/Desktop/AutoHDR/backend/scripts/bounty_to_kaggle_submit.py`: default block on risky name tokens (`oracle`, `probe`, `constant`) in file name/message unless `--allow-risky-name` is explicitly set.
 
 ## Narrative Preservation (Do Not Drop History)
 

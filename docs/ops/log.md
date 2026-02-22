@@ -894,3 +894,21 @@ Input scored CSV: `/Users/aaron/Desktop/AutoHDR/v11_submission.csv`
    - Added regression test in `/Users/aaron/Desktop/AutoHDR/backend/tests/test_organize_real_chain.py`.
 5. Chronicle update:
    - added failsafe completion timestamp and explicit reconciliation action entry in `/Users/aaron/Desktop/AutoHDR/docs/ops/journey_chronicle.md`.
+
+### 12.20 Invalidation status + closeout snapshot (February 22, 2026 19:00 UTC / 13:00 CST)
+
+1. Pulled fresh Kaggle submissions CSV (`--page-size 100`) and leaderboard snapshot (`kaggle competitions leaderboard --show`).
+2. Invalidation request status:
+   - still pending as of `2026-02-22 19:00:30 UTC`.
+   - probe submissions (`submission_constant100_20260222_174232.csv`, `submission_constant200_20260222_1747.csv`, and `submission_oracle_scores_envelope*`) remain present in submissions history.
+3. Leaderboard state at snapshot:
+   - `Aaron Woods` displayed at `100.00000` (probe-contaminated state),
+   - `Mirza Milan Farabi` also displayed at `100.00000`.
+4. Real-lineage anchor unchanged:
+   - top confirmed real zip-backed submissions remain tied at `31.63214`:
+     - `submission_v4_oracle_valid_allzip_20260222_175058_scored_20260222_121503.csv`
+     - `submission_v4_oracle_valid_allzip_failsafe8_20260222_122601_scored_20260222_122649.csv`
+5. Documentation synchronized:
+   - `/Users/aaron/Desktop/AutoHDR/plan.md` updated with pending invalidation status and latest leaderboard snapshot note.
+   - `/Users/aaron/Desktop/AutoHDR/docs/ops/real_submission_lineage.md` generation timestamp + invalidation status note updated.
+   - `/Users/aaron/Desktop/AutoHDR/docs/ops/journey_chronicle.md` updated with post-closeout status-check timeline row and final observed-state section.

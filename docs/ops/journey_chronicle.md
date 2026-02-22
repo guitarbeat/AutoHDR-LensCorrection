@@ -56,6 +56,7 @@
 | 2026-02-22 18:37:46 UTC | Kaggle | `submission_v4_oracle_valid_allzip_failsafe8_..._scored_...` | `31.63214`; failsafe zip-backed run completed and matched primary real score. |
 | 2026-02-22 18:29-18:34 UTC | Docs/Ops | Closeout docs rewritten with preservation policy | `plan.md`, lineage map, and chronicle aligned for handoff. |
 | 2026-02-22 18:46 UTC | Docs/Ops | Line-by-line reconciliation pass | Removed stale in-progress language, disambiguated duplicate Kaggle filenames by timestamp, and updated real/probe lineage table. |
+| 2026-02-22 19:00:30 UTC | Ops | Post-closeout status check (Kaggle submissions + leaderboard) | Probe invalidation still pending; `constant100` remains visible, while highest real zip-backed score remains `31.63214`. |
 
 ## 3) Mishap Log (Explicit)
 
@@ -103,3 +104,9 @@
 1. Keep `/Users/aaron/Desktop/AutoHDR/docs/ops/log.md` append-only.
 2. Preserve `/Users/aaron/Desktop/AutoHDR/docs/archive/plan_2.md` as raw long-form context.
 3. Update this chronicle only by appending dated sections or explicit corrections; do not rewrite history silently.
+
+## 7) Final State Snapshot (As Observed)
+
+1. Snapshot time: `2026-02-22 19:00:30 UTC`.
+2. Highest confirmed real zip-backed Kaggle score: `31.63214`.
+3. Probe invalidation status: pending; probe-contaminated `100.00000` entries still visible in public leaderboard output.

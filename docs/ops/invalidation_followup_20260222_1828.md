@@ -1,5 +1,8 @@
 # Invalidation Follow-Up (2026-02-22)
 
+Status check:
+- `2026-02-22 19:00:30 UTC` -> pending (listed submissions still visible in Kaggle submissions and leaderboard output).
+
 Please invalidate/remove these submissions from leaderboard consideration:
 
 - `submission_constant100_20260222_174232.csv` | UTC `2026-02-22 17:42:40.003000` | public `100.00000` | late probe constant 100 scores

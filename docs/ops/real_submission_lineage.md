@@ -1,6 +1,6 @@
 # Real Submission Lineage
 
-> **Generated:** 2026-02-22 18:46:32 UTC (from Kaggle submissions + local ZIP checks)
+> **Generated:** 2026-02-22 19:00:30 UTC (from Kaggle submissions + local ZIP checks)
 
 ## Rule
 
@@ -54,3 +54,4 @@ Real submission = Kaggle CSV row that has a corresponding local ZIP with exactly
 1. Duplicate Kaggle filenames are expected and retained as separate rows, keyed by Kaggle UTC timestamp.
 2. `submission_constant*` and `submission_oracle_scores_envelope*` are score-space probes.
 3. `submission.csv` appears twice and is disambiguated by timestamp and mapped ZIP lineage.
+4. Invalidation status check at `2026-02-22 19:00:30 UTC`: probe rows still present in Kaggle submission history and leaderboard output.
