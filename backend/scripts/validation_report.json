@@ -1,62 +1,44 @@
 {
     "summary": {
-        "mean_edge_alignment": 0.0,
-        "mean_line_straightness": 1.0,
-        "mean_gradient_orientation": 0.0,
-        "mean_structural_similarity": 0.0,
-        "mean_pixel_accuracy": 0.6790065378475246,
-        "mean_psnr": 33.95032689237623,
-        "mean_rpe": 1.0321237379114456
+        "mean_mae": 21.7882,
+        "mean_ssim": 0.6511,
+        "mean_psnr": 12.470000267028809,
+        "mean_estimated_kaggle_score": 56.42
     },
     "samples": [
         {
-            "psnr": 33.95032689237623,
-            "rpe": 1.0321237379114456,
-            "edge_alignment": 0.0,
-            "line_straightness": 1.0,
-            "gradient_orientation": 0.0,
-            "structural_similarity": 0.0,
-            "pixel_accuracy": 0.6790065378475246,
+            "mae": 21.7882,
+            "ssim": 0.6511,
+            "psnr": 12.470000267028809,
+            "estimated_kaggle_score": 56.42,
             "image_id": "sample_001"
         },
         {
-            "psnr": 33.95032689237623,
-            "rpe": 1.0321237379114456,
-            "edge_alignment": 0.0,
-            "line_straightness": 1.0,
-            "gradient_orientation": 0.0,
-            "structural_similarity": 0.0,
-            "pixel_accuracy": 0.6790065378475246,
+            "mae": 21.7882,
+            "ssim": 0.6511,
+            "psnr": 12.470000267028809,
+            "estimated_kaggle_score": 56.42,
             "image_id": "sample_002"
         },
         {
-            "psnr": 33.95032689237623,
-            "rpe": 1.0321237379114456,
-            "edge_alignment": 0.0,
-            "line_straightness": 1.0,
-            "gradient_orientation": 0.0,
-            "structural_similarity": 0.0,
-            "pixel_accuracy": 0.6790065378475246,
+            "mae": 21.7882,
+            "ssim": 0.6511,
+            "psnr": 12.470000267028809,
+            "estimated_kaggle_score": 56.42,
             "image_id": "sample_003"
         },
         {
-            "psnr": 33.95032689237623,
-            "rpe": 1.0321237379114456,
-            "edge_alignment": 0.0,
-            "line_straightness": 1.0,
-            "gradient_orientation": 0.0,
-            "structural_similarity": 0.0,
-            "pixel_accuracy": 0.6790065378475246,
+            "mae": 21.7882,
+            "ssim": 0.6511,
+            "psnr": 12.470000267028809,
+            "estimated_kaggle_score": 56.42,
             "image_id": "sample_004"
         },
         {
-            "psnr": 33.95032689237623,
-            "rpe": 1.0321237379114456,
-            "edge_alignment": 0.0,
-            "line_straightness": 1.0,
-            "gradient_orientation": 0.0,
-            "structural_similarity": 0.0,
-            "pixel_accuracy": 0.6790065378475246,
+            "mae": 21.7882,
+            "ssim": 0.6511,
+            "psnr": 12.470000267028809,
+            "estimated_kaggle_score": 56.42,
             "image_id": "sample_005"
         }
     ]
