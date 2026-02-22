@@ -26,7 +26,8 @@ def train_micro_dataset(data_dir: str, num_samples: int = 20, epochs: int = 100)
     
     # 2. Setup Data
     print(f"Loading data from: {data_dir}")
-    train_loader, _, _ = get_dataloaders(root_dir=data_dir, batch_size=4, num_workers=0)
+    limit_samples = max(100, num_samples * 2)
+    train_loader, _, _ = get_dataloaders(root_dir=data_dir, batch_size=4, num_workers=0, limit=limit_samples)
     
     # Extract a micro-subset
     if len(train_loader.dataset) == 0:
@@ -37,7 +38,7 @@ def train_micro_dataset(data_dir: str, num_samples: int = 20, epochs: int = 100)
     micro_loader = torch.utils.data.DataLoader(micro_dataset, batch_size=4, shuffle=True)
     
     # 3. Setup Model
-    model = load_model(pretrained=True)
+    model = load_model()
     model = model.to(device)
     model.train()
     
