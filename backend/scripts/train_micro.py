@@ -53,23 +53,19 @@ def train_micro_dataset(data_dir: str, num_samples: int = 20, epochs: int = 100)
         
         for batch in micro_loader:
             original_imgs = batch["original"].to(device)
-            # Flow-Field Approach:
-            # The ViT outputs a (B, 2, 14, 14) grid of displacement vectors.
-            # In a full training pipeline, we would compute the ground truth flow field
-            # between `original_imgs` and `batch["generated"]` using an optical flow algorithm
-            # (like RAFT) offline, and use that as the target.
-            # 
-            # Alternatively, we can use `torch.nn.functional.grid_sample` to warp
-            # `original_imgs` using the predicted flow, and calculate MAE against `generated_imgs`.
+            # Distortion Coefficients Approach:
+            # The ViT outputs 5 coefficients: k1, k2, k3, p1, p2.
+            # In a full training pipeline, we would compare these against known ground truth
+            # or use them to undistort the image and compare against the target image.
             
-            # For this MVP overfit test, we mock a target flow field of zeros 
+            # For this MVP overfit test, we mock a target of zeros
             # (assuming perfect input) to verify gradient flow through the ViT backbone.
-            mock_target_flow = torch.zeros(original_imgs.size(0), 2, 14, 14).to(device)
+            mock_target_coeffs = torch.zeros(original_imgs.size(0), 5).to(device)
             
             optimizer.zero_grad()
-            predictions = model(original_imgs) # Output: (B, 2, 14, 14)
+            predictions = model(original_imgs) # Output: (B, 5)
             
-            loss = criterion(predictions, mock_target_flow)
+            loss = criterion(predictions, mock_target_coeffs)
             loss.backward()
             optimizer.step()
             
