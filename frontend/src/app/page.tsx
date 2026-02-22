@@ -3,11 +3,19 @@
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 
+interface CorrectionResult {
+  status: string;
+  width: number;
+  height: number;
+  metrics: Record<string, number>;
+}
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<CorrectionResult | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -18,12 +26,38 @@ export default function Home() {
     };
   }, [preview]);
 
+  const processFile = (selectedFile: File) => {
+    setFile(selectedFile);
+    setPreview(URL.createObjectURL(selectedFile));
+    setResult(null);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
-      setResult(null);
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      // Only set inactive if we are leaving the container, not entering a child
+      if (e.relatedTarget && e.currentTarget.contains(e.relatedTarget as Node)) {
+        return;
+      }
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -64,7 +98,17 @@ export default function Home() {
 
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Upload Section */}
-          <div className="w-full flex flex-col gap-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 items-center justify-center min-h-[300px] bg-gray-50 dark:bg-gray-900/50 transition-colors hover:border-gray-400 dark:hover:border-gray-500">
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            className={`w-full flex flex-col gap-4 border-2 border-dashed rounded-xl p-8 items-center justify-center min-h-[300px] transition-colors ${
+              dragActive
+                ? "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20"
+                : "border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:border-gray-400 dark:hover:border-gray-500"
+            }`}
+          >
             <input 
               type="file" 
               accept="image/png, image/jpeg, image/jpg" 
@@ -76,7 +120,12 @@ export default function Home() {
             {preview ? (
               <div className="w-full h-full flex flex-col items-center justify-center gap-4">
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
-                  <Image src={preview} alt="Preview" fill className="object-cover" />
+                  <Image
+                    src={preview}
+                    alt={file ? `Preview of ${file.name}` : "Preview"}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
                 <div className="flex gap-2 w-full">
                   <button 
@@ -96,7 +145,13 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="w-12 h-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
                 <div className="text-center">
