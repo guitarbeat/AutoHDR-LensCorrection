@@ -20,6 +20,12 @@ Regenerate figures if needed:
 python /Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/build_figures.py
 ```
 
+If your external originals are mounted in a different location:
+
+```bash
+python /Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/build_figures.py --test-originals-dir "/path/to/test-originals"
+```
+
 ## Guardrail
 
 Only ZIP-backed lineage counts as real.

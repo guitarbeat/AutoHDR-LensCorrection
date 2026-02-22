@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import argparse
 import json
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -11,7 +13,8 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 
-REPO = Path("/Users/aaron/Desktop/AutoHDR")
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO = SCRIPT_DIR.parent.parent
 FIG_DIR = REPO / "1min_solution_overview" / "assets" / "figures"
 
 TOP_MANIFEST = (
@@ -62,7 +65,8 @@ def count_lineage_rows(lines: list[str], heading: str) -> int:
         stripped = line.strip()
         if stripped.startswith("## ") and stripped != heading:
             break
-        if stripped.startswith("| `2026-"):
+        # Count markdown table rows that begin with a backticked timestamp.
+        if re.match(r"^\|\s*`\d{4}-\d{2}-\d{2}\s", stripped):
             count += 1
     return count
 
@@ -158,20 +162,24 @@ def _pick_first_existing(paths: Iterable[Path]) -> Path | None:
     return None
 
 
-def build_before_after_example() -> None:
+def build_before_after_example(test_original_dir: Path) -> None:
     failsafe = json.loads(FAILSAFE_MANIFEST.read_text(encoding="utf-8"))
     ids = [str(x) for x in failsafe.get("replaced_ids", [])]
     if not ids:
         return
 
     selected_id = ids[0]
-    orig_path = TEST_ORIGINAL_DIR / f"{selected_id}.jpg"
+    orig_path = test_original_dir / f"{selected_id}.jpg"
     corrected_path = CORRECTED_DIR / f"{selected_id}.jpg"
 
     if not orig_path.exists() or not corrected_path.exists():
-        fallback_orig = _pick_first_existing(TEST_ORIGINAL_DIR.glob("*.jpg"))
+        fallback_orig = _pick_first_existing(test_original_dir.glob("*.jpg"))
         fallback_corr = _pick_first_existing(CORRECTED_DIR.glob("*.jpg"))
         if fallback_orig is None or fallback_corr is None:
+            print(
+                "Skipping fig_05_before_after_example.png: "
+                f"missing source images in {test_original_dir} and/or {CORRECTED_DIR}"
+            )
             return
         orig_path = fallback_orig
         corrected_path = fallback_corr
@@ -202,13 +210,26 @@ def build_before_after_example() -> None:
     plt.close(fig)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate 1-minute overview figures.")
+    parser.add_argument(
+        "--test-originals-dir",
+        default=str(TEST_ORIGINAL_DIR),
+        help="Directory containing original test JPGs for before/after figure.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    test_originals_dir = Path(args.test_originals_dir).expanduser().resolve()
+
     ensure_dir(FIG_DIR)
     plot_score_progression()
     plot_source_mix()
     plot_real_vs_probe_counts()
     plot_failsafe_patch()
-    build_before_after_example()
+    build_before_after_example(test_originals_dir)
     print(f"Generated figures in: {FIG_DIR}")
 
 
