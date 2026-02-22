@@ -107,7 +107,9 @@ def _grad_hist(gray: np.ndarray, bins: int = 36) -> np.ndarray:
     return hist / total
 
 
-def gradient_orientation_loss(pred: np.ndarray, gt: np.ndarray, bins: int = 36) -> float:
+def gradient_orientation_loss(
+    pred: np.ndarray, gt: np.ndarray, bins: int = 36
+) -> float:
     pred_hist = _grad_hist(_to_gray(pred), bins=bins)
     gt_hist = _grad_hist(_to_gray(gt), bins=bins)
     pred_norm = float(np.linalg.norm(pred_hist))
@@ -143,10 +145,16 @@ def ssim_score(pred: np.ndarray, gt: np.ndarray) -> float:
         denom = (mu_x**2 + mu_y**2 + c1) * (sigma_x + sigma_y + c2)
         if denom <= 0.0:
             return 0.0
-        return float(np.clip(((2.0 * mu_x * mu_y + c1) * (2.0 * sigma_xy + c2)) / denom, 0.0, 1.0))
+        return float(
+            np.clip(
+                ((2.0 * mu_x * mu_y + c1) * (2.0 * sigma_xy + c2)) / denom, 0.0, 1.0
+            )
+        )
 
 
 def normalized_mae(pred: np.ndarray, gt: np.ndarray) -> float:
     if pred.shape != gt.shape:
         gt = cv2.resize(gt, (pred.shape[1], pred.shape[0]))
-    return float(np.mean(np.abs(pred.astype(np.float32) - gt.astype(np.float32))) / 255.0)
+    return float(
+        np.mean(np.abs(pred.astype(np.float32) - gt.astype(np.float32))) / 255.0
+    )

@@ -26,7 +26,9 @@ CALIBGUARD_STEM_RE = re.compile(
     r"^submission_(?P<tag>.+)_(?P<profile>safe|balanced|aggressive)_(?P<ts>\d{8}_\d{6})$"
 )
 SAFE_HEURISTIC_STEM_RE = re.compile(r"^submission_safe_heuristic_(?P<ts>\d{8}_\d{6})$")
-HYBRID_CANDIDATE_STEM_RE = re.compile(r"^submission_hybrid_candidate_(?P<ts>\d{8}_\d{6})$")
+HYBRID_CANDIDATE_STEM_RE = re.compile(
+    r"^submission_hybrid_candidate_(?P<ts>\d{8}_\d{6})$"
+)
 
 
 @dataclass(frozen=True)
@@ -55,7 +57,9 @@ def _safe_resolve(path: Path, output_root: Path) -> Path:
     raise ValueError(f"Refusing to operate outside output root: {resolved}")
 
 
-def _infer_companions(zip_path: Path, output_root: Path, include_json: bool, include_corrected: bool) -> list[Path]:
+def _infer_companions(
+    zip_path: Path, output_root: Path, include_json: bool, include_corrected: bool
+) -> list[Path]:
     companions: list[Path] = []
 
     if include_json:
@@ -97,8 +101,12 @@ def _infer_companions(zip_path: Path, output_root: Path, include_json: bool, inc
     return companions
 
 
-def _build_bundle(zip_path: Path, output_root: Path, include_json: bool, include_corrected: bool) -> ArtifactBundle:
-    companions = _infer_companions(zip_path, output_root, include_json, include_corrected)
+def _build_bundle(
+    zip_path: Path, output_root: Path, include_json: bool, include_corrected: bool
+) -> ArtifactBundle:
+    companions = _infer_companions(
+        zip_path, output_root, include_json, include_corrected
+    )
     return ArtifactBundle(zip_path=zip_path, companions=companions)
 
 
@@ -106,7 +114,9 @@ def _list_zips(output_root: Path) -> list[Path]:
     return sorted(output_root.glob("submission*.zip"))
 
 
-def _resolve_selected_zips(output_root: Path, zip_names: list[str], globs: list[str]) -> list[Path]:
+def _resolve_selected_zips(
+    output_root: Path, zip_names: list[str], globs: list[str]
+) -> list[Path]:
     selected: dict[str, Path] = {}
 
     for name in zip_names:
@@ -134,11 +144,17 @@ def _print_bundle(bundle: ArtifactBundle, output_root: Path) -> int:
         if resolved.is_file():
             total_bytes += resolved.stat().st_size
         elif resolved.is_dir():
-            total_bytes += sum(p.stat().st_size for p in resolved.rglob("*") if p.is_file())
+            total_bytes += sum(
+                p.stat().st_size for p in resolved.rglob("*") if p.is_file()
+            )
 
     print(f"- {bundle.zip_path.name} ({_format_size(total_bytes)})")
     for path in bundle.companions:
-        rel = path.relative_to(output_root) if output_root in path.resolve().parents else path.name
+        rel = (
+            path.relative_to(output_root)
+            if output_root in path.resolve().parents
+            else path.name
+        )
         kind = "dir" if path.is_dir() else "file"
         print(f"    companion[{kind}]: {rel}")
     return total_bytes
@@ -156,7 +172,9 @@ def _delete_path(path: Path, output_root: Path) -> None:
 
 def parse_args() -> argparse.Namespace:
     cfg = get_config()
-    parser = argparse.ArgumentParser(description="List and prune generated submission artifacts.")
+    parser = argparse.ArgumentParser(
+        description="List and prune generated submission artifacts."
+    )
     parser.add_argument(
         "--output-dir",
         default=str(cfg.output_root),
@@ -199,7 +217,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    output_root = require_existing_dir(Path(args.output_dir).expanduser().resolve(), "Output directory")
+    output_root = require_existing_dir(
+        Path(args.output_dir).expanduser().resolve(), "Output directory"
+    )
     include_json = not args.no_json
     include_corrected = not args.no_corrected
 
@@ -209,7 +229,12 @@ def main() -> None:
         print(f"Found {len(zips)} submission zip(s)")
         total_bytes = 0
         for zip_path in zips:
-            bundle = _build_bundle(zip_path, output_root, include_json=include_json, include_corrected=include_corrected)
+            bundle = _build_bundle(
+                zip_path,
+                output_root,
+                include_json=include_json,
+                include_corrected=include_corrected,
+            )
             total_bytes += _print_bundle(bundle, output_root)
         print(f"Estimated total footprint: {_format_size(total_bytes)}")
         if not args.zip_name and not args.glob:
@@ -221,7 +246,12 @@ def main() -> None:
         return
 
     bundles = [
-        _build_bundle(zip_path, output_root, include_json=include_json, include_corrected=include_corrected)
+        _build_bundle(
+            zip_path,
+            output_root,
+            include_json=include_json,
+            include_corrected=include_corrected,
+        )
         for zip_path in selected
     ]
 

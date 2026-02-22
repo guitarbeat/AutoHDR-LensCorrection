@@ -37,7 +37,9 @@ class LeaseInfo:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Review Akash deployment logs and status.")
+    parser = argparse.ArgumentParser(
+        description="Review Akash deployment logs and status."
+    )
     parser.add_argument(
         "--dseq",
         action="append",
@@ -101,7 +103,9 @@ def api_request(
     )
     if not response.ok:
         body = response.text[:600]
-        raise RuntimeError(f"API {method} {path} failed ({response.status_code}): {body}")
+        raise RuntimeError(
+            f"API {method} {path} failed ({response.status_code}): {body}"
+        )
     return response.json()
 
 
@@ -134,7 +138,9 @@ def fetch_lease_info(api_key: str, dseq: str) -> LeaseInfo:
     gseq_raw = lease_id.get("gseq")
     oseq_raw = lease_id.get("oseq")
     if not provider_address or gseq_raw is None or oseq_raw is None:
-        raise RuntimeError(f"Lease is missing provider/gseq/oseq for dseq={dseq}: {lease_id}")
+        raise RuntimeError(
+            f"Lease is missing provider/gseq/oseq for dseq={dseq}: {lease_id}"
+        )
 
     provider_info = None
     owner = lease_id.get("owner")
@@ -153,7 +159,9 @@ def fetch_lease_info(api_key: str, dseq: str) -> LeaseInfo:
     provider_host_uri = (provider_info or {}).get("hostUri")
     if not provider_host_uri:
         try:
-            provider_obj = api_request(api_key, "GET", f"/v1/providers/{provider_address}")
+            provider_obj = api_request(
+                api_key, "GET", f"/v1/providers/{provider_address}"
+            )
             provider_host_uri = provider_obj.get("hostUri")
         except Exception:
             provider_host_uri = None
@@ -172,10 +180,15 @@ def fetch_lease_info(api_key: str, dseq: str) -> LeaseInfo:
 
 
 def fetch_provider_status(lease: LeaseInfo, token: str) -> tuple[int, str]:
-    url = f"{lease.provider_host_uri}/lease/{lease.dseq}/{lease.gseq}/{lease.oseq}/status"
+    url = (
+        f"{lease.provider_host_uri}/lease/{lease.dseq}/{lease.gseq}/{lease.oseq}/status"
+    )
     response = requests.get(
         url,
-        headers={"Authorization": f"Bearer {token}", "content-type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "content-type": "application/json",
+        },
         timeout=20,
         verify=False,
     )
@@ -235,7 +248,9 @@ def ws_url(lease: LeaseInfo, stream_type: str, tail: int, service: str) -> str:
     )
 
 
-def summarize_lines(lines: list[str], limit_hits: int = 30, limit_tail: int = 25) -> None:
+def summarize_lines(
+    lines: list[str], limit_hits: int = 30, limit_tail: int = 25
+) -> None:
     hits = [line for line in lines if INTERESTING_PATTERNS.search(line)]
     print(f"line_count={len(lines)} interesting_hits={len(hits)}")
     if hits:

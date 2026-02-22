@@ -1,12 +1,17 @@
-import pytest
 import numpy as np
 import sys
 import os
 
 # Add the project root to sys.path so we can import backend
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from backend.evaluation.metrics import calculate_mae, calculate_psnr, calculate_ssim, evaluate_metrics
+from backend.evaluation.metrics import (
+    calculate_mae,
+    calculate_psnr,
+    calculate_ssim,
+    evaluate_metrics,
+)
+
 
 class TestMetrics:
     def test_calculate_mae_identical(self):
@@ -60,10 +65,10 @@ class TestMetrics:
         """Test evaluate_metrics wrapper with identical images."""
         img = np.zeros((100, 100, 3), dtype=np.uint8)
         metrics = evaluate_metrics(img, img)
-        assert metrics['mae'] == 0.0
-        assert metrics['ssim'] == 1.0
-        assert metrics['psnr'] == 100.0
-        assert metrics['estimated_kaggle_score'] == 100.0
+        assert metrics["mae"] == 0.0
+        assert metrics["ssim"] == 1.0
+        assert metrics["psnr"] == 100.0
+        assert metrics["estimated_kaggle_score"] == 100.0
 
     def test_evaluate_metrics_score_calc(self):
         """Test evaluate_metrics score calculation."""
@@ -71,16 +76,16 @@ class TestMetrics:
         img1 = np.zeros((100, 100, 3), dtype=np.uint8)
         img2 = np.ones((100, 100, 3), dtype=np.uint8) * 50
         metrics = evaluate_metrics(img1, img2)
-        assert metrics['mae'] == 50.0
+        assert metrics["mae"] == 50.0
         # Score = max(0, 100 - 50*2) = 0
-        assert metrics['estimated_kaggle_score'] == 0.0
+        assert metrics["estimated_kaggle_score"] == 0.0
 
         # MAE = 25
         img3 = np.ones((100, 100, 3), dtype=np.uint8) * 25
         metrics = evaluate_metrics(img1, img3)
-        assert metrics['mae'] == 25.0
+        assert metrics["mae"] == 25.0
         # Score = 100 - 25*2 = 50
-        assert metrics['estimated_kaggle_score'] == 50.0
+        assert metrics["estimated_kaggle_score"] == 50.0
 
     def test_single_pixel(self):
         """Test with single pixel images."""

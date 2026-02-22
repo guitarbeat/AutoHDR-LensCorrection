@@ -59,7 +59,9 @@ def analyze_dim_bucket_errors(train_dir: Path, limit: int = 2000) -> None:
     originals = [f for f in all_files if f.endswith("_original.jpg")]
 
     np.random.seed(42)
-    indices = np.random.choice(len(originals), min(limit, len(originals)), replace=False)
+    indices = np.random.choice(
+        len(originals), min(limit, len(originals)), replace=False
+    )
     scale = 0.25
     mae_by_dim: list[dict] = []
 
@@ -91,14 +93,21 @@ def analyze_dim_bucket_errors(train_dir: Path, limit: int = 2000) -> None:
     for entry in mae_by_dim:
         dim = entry["dim"]
         if dim not in dim_stats:
-            dim_stats[dim] = {"count": 0, "mae_sum": 0.0, "bucket": entry["bucket"], "bad_count": 0}
+            dim_stats[dim] = {
+                "count": 0,
+                "mae_sum": 0.0,
+                "bucket": entry["bucket"],
+                "bad_count": 0,
+            }
         dim_stats[dim]["count"] += 1
         dim_stats[dim]["mae_sum"] += entry["mae"]
         if entry["mae"] > 15.0:
             dim_stats[dim]["bad_count"] += 1
 
     print("\n--- Error Analysis by Dimension ---")
-    sorted_dims = sorted(dim_stats.items(), key=lambda x: x[1]["mae_sum"] / x[1]["count"], reverse=True)
+    sorted_dims = sorted(
+        dim_stats.items(), key=lambda x: x[1]["mae_sum"] / x[1]["count"], reverse=True
+    )
     for dim, stats in sorted_dims:
         avg_mae = stats["mae_sum"] / stats["count"]
         bad_pct = (stats["bad_count"] / stats["count"]) * 100
@@ -110,7 +119,9 @@ def analyze_dim_bucket_errors(train_dir: Path, limit: int = 2000) -> None:
 
 def main() -> None:
     cfg = get_config()
-    parser = argparse.ArgumentParser(description="Diagnose dimension-bucket errors by dimensions")
+    parser = argparse.ArgumentParser(
+        description="Diagnose dimension-bucket errors by dimensions"
+    )
     parser.add_argument("--train-dir", default=str(cfg.train_dir))
     parser.add_argument("--limit", type=int, default=2000)
     args = parser.parse_args()

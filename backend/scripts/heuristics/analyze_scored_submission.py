@@ -68,7 +68,9 @@ def _stats(scores: list[float]) -> dict[str, float | int]:
 
 def main() -> None:
     cfg = get_config()
-    parser = argparse.ArgumentParser(description="Analyze scored submission by dimension and bucket")
+    parser = argparse.ArgumentParser(
+        description="Analyze scored submission by dimension and bucket"
+    )
     parser.add_argument("--score-csv", required=True)
     parser.add_argument("--test-dir", default=str(cfg.test_dir))
     parser.add_argument("--out-json", required=True)
@@ -115,13 +117,17 @@ def main() -> None:
     summary = _stats(all_scores)
 
     by_dim_rows = []
-    for dim_key, values in sorted(by_dim.items(), key=lambda kv: (len(kv[1]), kv[0]), reverse=True):
+    for dim_key, values in sorted(
+        by_dim.items(), key=lambda kv: (len(kv[1]), kv[0]), reverse=True
+    ):
         row = {"dimension": dim_key}
         row.update(_stats(values))
         by_dim_rows.append(row)
 
     by_bucket_rows = []
-    for bucket, values in sorted(by_bucket.items(), key=lambda kv: (len(kv[1]), kv[0]), reverse=True):
+    for bucket, values in sorted(
+        by_bucket.items(), key=lambda kv: (len(kv[1]), kv[0]), reverse=True
+    ):
         row = {"bucket": bucket}
         row.update(_stats(values))
         by_bucket_rows.append(row)
@@ -129,7 +135,8 @@ def main() -> None:
     dim_blockers = [
         row
         for row in by_dim_rows
-        if int(row["count"]) >= 20 and (float(row["mean"]) < 15.0 or float(row["zero_rate"]) > 30.0)
+        if int(row["count"]) >= 20
+        and (float(row["mean"]) < 15.0 or float(row["zero_rate"]) > 30.0)
     ]
 
     blockers = {
@@ -155,7 +162,9 @@ def main() -> None:
     print(f"Rows analyzed: {summary['count']}")
     print(f"Mean: {summary['mean']:.4f}")
     print(f"Median: {summary['median']:.4f}")
-    print(f"Zero rate: {summary['zero_rate']:.2f}% ({summary['zeros']}/{summary['count']})")
+    print(
+        f"Zero rate: {summary['zero_rate']:.2f}% ({summary['zeros']}/{summary['count']})"
+    )
     print(f"Dimension blockers (count>=20): {len(dim_blockers)}")
     print(f"JSON report: {out_json}")
 

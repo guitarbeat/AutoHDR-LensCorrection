@@ -168,8 +168,16 @@ def remap_with_bundle(
             "Image shape does not match cached map size: "
             f"expected {(bundle.height, bundle.width)}, got {image.shape[:2]}"
         )
-    interp_name = bundle.interpolation if interpolation is None else resolve_interpolation(interpolation)[0]
-    border_name = bundle.border_mode if border_mode is None else resolve_border_mode(border_mode)[0]
+    interp_name = (
+        bundle.interpolation
+        if interpolation is None
+        else resolve_interpolation(interpolation)[0]
+    )
+    border_name = (
+        bundle.border_mode
+        if border_mode is None
+        else resolve_border_mode(border_mode)[0]
+    )
     interp_code = INTERPOLATION_CHOICES[interp_name]
     border_code = BORDER_MODE_CHOICES[border_name]
     return cv2.remap(

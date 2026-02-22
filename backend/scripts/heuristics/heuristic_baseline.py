@@ -34,8 +34,14 @@ NUM_SEARCH_PAIRS = 50  # Number of train pairs to evaluate during grid search
 IMG_HEIGHT, IMG_WIDTH = 1367, 2048
 
 
-def apply_undistortion(image: np.ndarray, k1: float, k2: float,
-                       p1: float = 0.0, p2: float = 0.0, k3: float = 0.0) -> np.ndarray:
+def apply_undistortion(
+    image: np.ndarray,
+    k1: float,
+    k2: float,
+    p1: float = 0.0,
+    p2: float = 0.0,
+    k3: float = 0.0,
+) -> np.ndarray:
     """Apply Brown-Conrady undistortion using cached map+remap path."""
     dist_coeffs = np.array([k1, k2, p1, p2, k3], dtype=np.float32)
     corrected, _ = undistort_via_maps(
@@ -85,7 +91,9 @@ def grid_search(pairs: list[Tuple[str, str]]) -> Tuple[float, float, float]:
     k1_values = np.arange(-0.5, 0.55, 0.05)
     k2_values = np.arange(-0.3, 0.35, 0.05)
 
-    print(f"Grid search: {len(k1_values)} x {len(k2_values)} = {len(k1_values) * len(k2_values)} combinations")
+    print(
+        f"Grid search: {len(k1_values)} x {len(k2_values)} = {len(k1_values) * len(k2_values)} combinations"
+    )
     print(f"Evaluating on {len(pairs)} image pairs...")
 
     # Preload images (downsized for speed)
@@ -130,11 +138,15 @@ def grid_search(pairs: list[Tuple[str, str]]) -> Tuple[float, float, float]:
             if count % 50 == 0 or count == total:
                 elapsed = time.time() - t0
                 eta = elapsed / count * (total - count)
-                print(f"  [{count}/{total}] Best so far: k1={best_k1:.3f}, k2={best_k2:.3f}, MAE={best_mae:.4f} (ETA: {eta:.0f}s)")
+                print(
+                    f"  [{count}/{total}] Best so far: k1={best_k1:.3f}, k2={best_k2:.3f}, MAE={best_mae:.4f} (ETA: {eta:.0f}s)"
+                )
 
-    print(f"\n=== COARSE SEARCH COMPLETE ===")
+    print("\n=== COARSE SEARCH COMPLETE ===")
     print(f"Best: k1={best_k1:.4f}, k2={best_k2:.4f}, MAE={best_mae:.4f}")
-    print(f"Improvement over baseline: {baseline_mae - best_mae:.4f} ({(baseline_mae - best_mae)/baseline_mae*100:.1f}%)")
+    print(
+        f"Improvement over baseline: {baseline_mae - best_mae:.4f} ({(baseline_mae - best_mae)/baseline_mae*100:.1f}%)"
+    )
 
     # Fine grid around best
     print(f"\nRefining around k1={best_k1:.3f}, k2={best_k2:.3f}...")
@@ -153,9 +165,11 @@ def grid_search(pairs: list[Tuple[str, str]]) -> Tuple[float, float, float]:
                 best_mae = mean_mae
                 best_k1, best_k2 = k1, k2
 
-    print(f"\n=== FINE SEARCH COMPLETE ===")
+    print("\n=== FINE SEARCH COMPLETE ===")
     print(f"Best: k1={best_k1:.4f}, k2={best_k2:.4f}, MAE={best_mae:.4f}")
-    print(f"Total improvement over baseline: {baseline_mae - best_mae:.4f} ({(baseline_mae - best_mae)/baseline_mae*100:.1f}%)")
+    print(
+        f"Total improvement over baseline: {baseline_mae - best_mae:.4f} ({(baseline_mae - best_mae)/baseline_mae*100:.1f}%)"
+    )
 
     return best_k1, best_k2, best_mae
 
@@ -193,7 +207,7 @@ def apply_to_test_set(k1: float, k2: float, test_dir: str, output_dir: str) -> s
     # Create zip
     zip_path = output_path / "submission_heuristic.zip"
     print(f"\nCreating zip: {zip_path}")
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zf:
         for fname in test_files:
             fpath = corrected_dir / fname
             if fpath.exists():
@@ -208,13 +222,19 @@ def apply_to_test_set(k1: float, k2: float, test_dir: str, output_dir: str) -> s
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Heuristic baseline for lens correction")
+    parser = argparse.ArgumentParser(
+        description="Heuristic baseline for lens correction"
+    )
     parser.add_argument("--phase", choices=["search", "apply", "both"], default="both")
     parser.add_argument("--train-dir", default=str(DEFAULT_TRAIN_DIR))
     parser.add_argument("--test-dir", default=str(DEFAULT_TEST_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
-    parser.add_argument("--k1", type=float, default=None, help="Preset k1 (skip search)")
-    parser.add_argument("--k2", type=float, default=None, help="Preset k2 (skip search)")
+    parser.add_argument(
+        "--k1", type=float, default=None, help="Preset k1 (skip search)"
+    )
+    parser.add_argument(
+        "--k2", type=float, default=None, help="Preset k2 (skip search)"
+    )
     parser.add_argument("--num-pairs", type=int, default=NUM_SEARCH_PAIRS)
     args = parser.parse_args()
 

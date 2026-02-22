@@ -20,7 +20,11 @@ import cv2
 import numpy as np
 
 from backend.config import ensure_dir, get_config, require_existing_dir
-from backend.core.undistort_ops import resolve_border_mode, resolve_interpolation, undistort_via_maps
+from backend.core.undistort_ops import (
+    resolve_border_mode,
+    resolve_interpolation,
+    undistort_via_maps,
+)
 from backend.evaluation import competition_proxy
 
 
@@ -125,7 +129,9 @@ def apply_undistortion(
         border_mode=border_mode,
     )
     if corrected.shape[:2] != (height, width):
-        corrected = cv2.resize(corrected, (width, height), interpolation=cv2.INTER_LANCZOS4)
+        corrected = cv2.resize(
+            corrected, (width, height), interpolation=cv2.INTER_LANCZOS4
+        )
     return corrected
 
 
@@ -239,7 +245,9 @@ def ssim_gray(pred_gray: np.ndarray, gt_gray: np.ndarray) -> float:
 
 
 def norm_mae(pred: np.ndarray, gt: np.ndarray) -> float:
-    return float(np.mean(np.abs(pred.astype(np.float32) - gt.astype(np.float32))) / 255.0)
+    return float(
+        np.mean(np.abs(pred.astype(np.float32) - gt.astype(np.float32))) / 255.0
+    )
 
 
 def warp_penalty(width: int, height: int, k1: float, k2: float) -> float:
@@ -311,8 +319,12 @@ def load_train_samples(
             continue
 
         if scale != 1.0:
-            orig = cv2.resize(orig, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-            gen = cv2.resize(gen, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+            orig = cv2.resize(
+                orig, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA
+            )
+            gen = cv2.resize(
+                gen, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA
+            )
 
         gen_gray = cv2.cvtColor(gen, cv2.COLOR_BGR2GRAY)
         gen_edges = cv2.Canny(gen_gray, 80, 160)
@@ -384,9 +396,15 @@ def evaluate_candidate(
             )
 
         if metric_profile == "competition_lite":
-            edge_vals.append(competition_proxy.edge_similarity_multiscale(corrected, sample.target))
-            line_vals.append(competition_proxy.line_orientation_loss(corrected, sample.target))
-            grad_vals.append(competition_proxy.gradient_orientation_loss(corrected, sample.target))
+            edge_vals.append(
+                competition_proxy.edge_similarity_multiscale(corrected, sample.target)
+            )
+            line_vals.append(
+                competition_proxy.line_orientation_loss(corrected, sample.target)
+            )
+            grad_vals.append(
+                competition_proxy.gradient_orientation_loss(corrected, sample.target)
+            )
             ssim_vals.append(competition_proxy.ssim_score(corrected, sample.target))
             mae_vals.append(competition_proxy.normalized_mae(corrected, sample.target))
         else:
@@ -394,8 +412,14 @@ def evaluate_candidate(
             corrected_edges = cv2.Canny(corrected_gray, 80, 160)
 
             edge_vals.append(edge_f1(corrected_edges, sample.target_edges))
-            line_vals.append(line_angle_loss(line_angle_hist(corrected_edges), sample.target_line_hist))
-            grad_vals.append(grad_hist_loss(grad_hist(corrected_gray), sample.target_grad_hist))
+            line_vals.append(
+                line_angle_loss(
+                    line_angle_hist(corrected_edges), sample.target_line_hist
+                )
+            )
+            grad_vals.append(
+                grad_hist_loss(grad_hist(corrected_gray), sample.target_grad_hist)
+            )
             ssim_vals.append(ssim_gray(corrected_gray, sample.target_gray))
             mae_vals.append(norm_mae(corrected, sample.target))
         border_vals.append(black_border_ratio(corrected))
@@ -444,10 +468,18 @@ def _candidate_grid(
     for dk1 in k1_offsets:
         for dk2 in k2_offsets:
             for alpha in alpha_values:
-                candidates.add((round(base_k1 + dk1, 6), round(base_k2 + dk2, 6), round(float(alpha), 6)))
+                candidates.add(
+                    (
+                        round(base_k1 + dk1, 6),
+                        round(base_k2 + dk2, 6),
+                        round(float(alpha), 6),
+                    )
+                )
     for alpha in alpha_values:
         candidates.add((round(base_k1, 6), round(base_k2, 6), round(float(alpha), 6)))
-        candidates.add((GLOBAL_FALLBACK["k1"], GLOBAL_FALLBACK["k2"], round(float(alpha), 6)))
+        candidates.add(
+            (GLOBAL_FALLBACK["k1"], GLOBAL_FALLBACK["k2"], round(float(alpha), 6))
+        )
     return sorted(candidates)
 
 
@@ -550,7 +582,13 @@ def _search_grid(
             model_type,
         )
         fallback_safe = fallback_primary.copy()
-        return fallback_primary, fallback_safe, len(candidates), valid, {"optimizer": "grid"}
+        return (
+            fallback_primary,
+            fallback_safe,
+            len(candidates),
+            valid,
+            {"optimizer": "grid"},
+        )
 
     primary = min(evals, key=lambda x: x["metrics"]["loss"])
 
@@ -579,7 +617,13 @@ def _search_grid(
 
     primary = min(evals, key=lambda x: x["metrics"]["loss"])
     safe = min(evals, key=lambda x: x["metrics"]["risk"])
-    return primary, safe, len(candidates) + len(refine_candidates), valid, {"optimizer": "grid"}
+    return (
+        primary,
+        safe,
+        len(candidates) + len(refine_candidates),
+        valid,
+        {"optimizer": "grid"},
+    )
 
 
 def _search_de(
@@ -597,7 +641,9 @@ def _search_de(
     seed: int,
 ) -> tuple[dict[str, Any], dict[str, Any], int, int, dict[str, Any]]:
     try:
-        from backend.scripts.heuristics.optimizer_scipy import differential_evolution_search
+        from backend.scripts.heuristics.optimizer_scipy import (
+            differential_evolution_search,
+        )
     except Exception:
         return _search_grid(
             samples,
@@ -715,12 +761,24 @@ def _search_de(
         )
         fallback_safe = fallback_primary.copy()
         meta = {"optimizer": "de_fallback", "de": result}
-        return fallback_primary, fallback_safe, int(result["evaluations"]) + len(refine_candidates), valid, meta
+        return (
+            fallback_primary,
+            fallback_safe,
+            int(result["evaluations"]) + len(refine_candidates),
+            valid,
+            meta,
+        )
 
     primary = min(evals, key=lambda x: x["metrics"]["loss"])
     safe = min(evals, key=lambda x: x["metrics"]["risk"])
     meta = {"optimizer": "de", "de": result}
-    return primary, safe, int(result["evaluations"]) + len(refine_candidates), valid, meta
+    return (
+        primary,
+        safe,
+        int(result["evaluations"]) + len(refine_candidates),
+        valid,
+        meta,
+    )
 
 
 def _search(
@@ -768,7 +826,9 @@ def _search(
     )
 
 
-def scored_dim_stats(score_csv: Path, test_dir: Path) -> tuple[dict[str, int], dict[str, float]]:
+def scored_dim_stats(
+    score_csv: Path, test_dir: Path
+) -> tuple[dict[str, int], dict[str, float]]:
     if not score_csv.exists():
         return {}, {}
 
@@ -821,25 +881,37 @@ def load_manifest(path: Path) -> dict[str, Any]:
 
 def main() -> None:
     cfg = get_config()
-    parser = argparse.ArgumentParser(description="Build CalibGuard-Dim coefficient table")
+    parser = argparse.ArgumentParser(
+        description="Build CalibGuard-Dim coefficient table"
+    )
     parser.add_argument("--train-dir", default=str(cfg.train_dir))
     parser.add_argument("--sample-per-dim", type=int, default=300)
     parser.add_argument("--min-dim-support", type=int, default=30)
     parser.add_argument(
         "--out-table",
-        default=str(cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_table.json"),
+        default=str(
+            cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_table.json"
+        ),
     )
     parser.add_argument(
         "--out-manifest",
-        default=str(cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_manifest.json"),
+        default=str(
+            cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_manifest.json"
+        ),
     )
     parser.add_argument("--score-csv", default=str(cfg.repo_root / "submission.csv"))
     parser.add_argument("--test-dir", default=str(cfg.test_dir))
     parser.add_argument("--scale", type=float, default=0.25)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-dims", type=int, default=None)
-    parser.add_argument("--interp", choices=["linear", "cubic", "lanczos4"], default="linear")
-    parser.add_argument("--border-mode", choices=["constant", "reflect", "replicate"], default="constant")
+    parser.add_argument(
+        "--interp", choices=["linear", "cubic", "lanczos4"], default="linear"
+    )
+    parser.add_argument(
+        "--border-mode",
+        choices=["constant", "reflect", "replicate"],
+        default="constant",
+    )
     parser.add_argument(
         "--alpha-grid",
         default="0.0",
@@ -847,7 +919,9 @@ def main() -> None:
     )
     parser.add_argument("--optimizer", choices=["grid", "de"], default="grid")
     parser.add_argument("--enable-rational", action="store_true")
-    parser.add_argument("--metric-profile", choices=["legacy", "competition_lite"], default="legacy")
+    parser.add_argument(
+        "--metric-profile", choices=["legacy", "competition_lite"], default="legacy"
+    )
     args = parser.parse_args()
 
     train_dir = Path(args.train_dir).expanduser().resolve()
@@ -918,7 +992,9 @@ def main() -> None:
         parent = str(dim_info["parent_class"])
 
         print(f"  [{idx}/{len(dim_items)}] {dim_key} support={support} parent={parent}")
-        samples = load_train_samples(dim_info["pairs"], args.sample_per_dim, rng, args.scale)
+        samples = load_train_samples(
+            dim_info["pairs"], args.sample_per_dim, rng, args.scale
+        )
         if not samples:
             print("    No valid samples loaded; using parent defaults")
             primary = {

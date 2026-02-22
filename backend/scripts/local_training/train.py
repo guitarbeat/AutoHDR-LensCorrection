@@ -176,7 +176,11 @@ class CombinedLoss(nn.Module):
 def get_device(allow_mps: bool = False) -> torch.device:
     if torch.cuda.is_available():
         return torch.device("cuda")
-    if allow_mps and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    if (
+        allow_mps
+        and hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_available()
+    ):
         return torch.device("mps")
     return torch.device("cpu")
 
@@ -257,7 +261,9 @@ def checkpoint_payload(
 
 def parse_args() -> argparse.Namespace:
     cfg = get_config()
-    parser = argparse.ArgumentParser(description="Train U-Net for lens distortion correction")
+    parser = argparse.ArgumentParser(
+        description="Train U-Net for lens distortion correction"
+    )
     parser.add_argument(
         "--data-root",
         default=str(cfg.data_root),
@@ -268,18 +274,30 @@ def parse_args() -> argparse.Namespace:
         default=str(cfg.checkpoint_root),
         help="Directory for checkpoints and training history",
     )
-    parser.add_argument("--model", choices=sorted(MODEL_REGISTRY.keys()), default="micro_unet")
+    parser.add_argument(
+        "--model", choices=sorted(MODEL_REGISTRY.keys()), default="micro_unet"
+    )
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--img-size", type=int, default=256)
     parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--normalize", action="store_true", help="Apply ImageNet normalization")
-    parser.add_argument("--max-train", type=int, default=None, help="Limit training samples")
-    parser.add_argument("--max-val", type=int, default=None, help="Limit validation samples")
-    parser.add_argument("--overfit", action="store_true", help="Use same tiny split for train/val")
+    parser.add_argument(
+        "--normalize", action="store_true", help="Apply ImageNet normalization"
+    )
+    parser.add_argument(
+        "--max-train", type=int, default=None, help="Limit training samples"
+    )
+    parser.add_argument(
+        "--max-val", type=int, default=None, help="Limit validation samples"
+    )
+    parser.add_argument(
+        "--overfit", action="store_true", help="Use same tiny split for train/val"
+    )
     parser.add_argument("--save-every", type=int, default=10)
-    parser.add_argument("--allow-mps", action="store_true", help="Allow MPS device usage")
+    parser.add_argument(
+        "--allow-mps", action="store_true", help="Allow MPS device usage"
+    )
     return parser.parse_args()
 
 
@@ -288,7 +306,9 @@ def main() -> None:
     data_root = Path(args.data_root).expanduser().resolve()
     output_dir = ensure_dir(Path(args.output_dir).expanduser().resolve())
     require_existing_dir(data_root, "Dataset root")
-    require_existing_dir(data_root / "lens-correction-train-cleaned", "Training images directory")
+    require_existing_dir(
+        data_root / "lens-correction-train-cleaned", "Training images directory"
+    )
     require_existing_dir(data_root / "test-originals", "Test images directory")
 
     device = get_device(allow_mps=args.allow_mps)
@@ -312,7 +332,9 @@ def main() -> None:
         max_train=max_train,
         max_val=max_val,
     )
-    print(f"Train: {len(train_loader.dataset)} samples, Val: {len(val_loader.dataset)} samples")
+    print(
+        f"Train: {len(train_loader.dataset)} samples, Val: {len(val_loader.dataset)} samples"
+    )
 
     model_class = MODEL_REGISTRY[args.model]
     model = model_class(in_channels=3, out_channels=3).to(device)
@@ -373,7 +395,9 @@ def main() -> None:
             torch.save(payload, ckpt_path)
 
         if args.overfit and train_loss < 0.001:
-            print(f"Overfit threshold reached (train_loss={train_loss:.6f}); stopping early")
+            print(
+                f"Overfit threshold reached (train_loss={train_loss:.6f}); stopping early"
+            )
             break
 
     history_path = output_dir / "training_history.json"

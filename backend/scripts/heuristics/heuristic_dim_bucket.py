@@ -72,12 +72,12 @@ def classify_image(h: int, w: int) -> str:
     """Classify image into correction bucket based on dimensions and optical center preservation."""
     is_portrait = h > w
     short_edge = w if is_portrait else h
-    
+
     if is_portrait:
         if short_edge == 1367:
             return "portrait_standard"
         return "portrait_cropped"
-        
+
     if short_edge == 1367:
         return "standard"
     elif short_edge in (1368, 1369, 1370, 1371):
@@ -91,16 +91,17 @@ def classify_image(h: int, w: int) -> str:
         # Global warping around w/2, h/2 becomes destructive.
         return "heavy_crop"
 
+
 # Coefficients per bucket (refined via micro-grid search)
 BUCKET_COEFFICIENTS = {
     # Tuned via 7-bucket micro-grid search (2026-02-22, --search-pairs 500)
-    "standard":            (-0.178, 0.368),
-    "near_standard_tall":  (-0.180, 0.378),
+    "standard": (-0.178, 0.368),
+    "near_standard_tall": (-0.180, 0.378),
     "near_standard_short": (-0.180, 0.378),
-    "moderate_crop":       (-0.095, 0.195),
-    "heavy_crop":          (-0.006, 0.028),
-    "portrait_standard":   (-0.015, 0.045),
-    "portrait_cropped":    (0.008, 0.008),
+    "moderate_crop": (-0.095, 0.195),
+    "heavy_crop": (-0.006, 0.028),
+    "portrait_standard": (-0.015, 0.045),
+    "portrait_cropped": (0.008, 0.008),
 }
 RISKY_BUCKETS = {"heavy_crop", "portrait_cropped"}
 
@@ -115,7 +116,9 @@ def parse_bucket_set(raw: str, allowed: set[str]) -> set[str]:
     return values
 
 
-def parse_bucket_overrides(raw_overrides: list[str], allowed: set[str]) -> dict[str, tuple[float, float]]:
+def parse_bucket_overrides(
+    raw_overrides: list[str], allowed: set[str]
+) -> dict[str, tuple[float, float]]:
     overrides: dict[str, tuple[float, float]] = {}
     for item in raw_overrides:
         parts = [p.strip() for p in item.split(":")]
@@ -129,7 +132,9 @@ def parse_bucket_overrides(raw_overrides: list[str], allowed: set[str]) -> dict[
         try:
             overrides[bucket] = (float(k1_str), float(k2_str))
         except ValueError as exc:
-            raise ValueError(f"Invalid numeric values in --override-bucket '{item}'") from exc
+            raise ValueError(
+                f"Invalid numeric values in --override-bucket '{item}'"
+            ) from exc
     return overrides
 
 
@@ -190,9 +195,7 @@ def search_exact_dimension_coefficients(
         pairs_by_dim[(h, w)].append((orig_path, gen_path))
 
     eligible = [
-        (dim, paths)
-        for dim, paths in pairs_by_dim.items()
-        if len(paths) >= min_pairs
+        (dim, paths) for dim, paths in pairs_by_dim.items() if len(paths) >= min_pairs
     ]
     eligible.sort(key=lambda item: len(item[1]), reverse=True)
     if max_dimensions is not None:
@@ -253,7 +256,9 @@ def search_exact_dimension_coefficients(
     return report
 
 
-def load_dimension_coefficients(path: Path) -> dict[tuple[int, int], tuple[float, float]]:
+def load_dimension_coefficients(
+    path: Path,
+) -> dict[tuple[int, int], tuple[float, float]]:
     raw = json.loads(path.read_text())
     output: dict[tuple[int, int], tuple[float, float]] = {}
     for dim_name, entry in raw.items():
@@ -277,7 +282,9 @@ def fine_grid_search(bucket: str, train_dir: str, num_pairs: int = 200):
     originals = [f for f in all_files if f.endswith("_original.jpg")]
 
     np.random.seed(42)
-    indices = np.random.choice(len(originals), min(num_pairs, len(originals)), replace=False)
+    indices = np.random.choice(
+        len(originals), min(num_pairs, len(originals)), replace=False
+    )
 
     # Filter to images of the right dimension bucket
     scale = 0.25
@@ -336,7 +343,9 @@ def fine_grid_search(bucket: str, train_dir: str, num_pairs: int = 200):
         k2_values,
     )
 
-    print(f"    Best: k1={best_k1:.3f}, k2={best_k2:.3f}, MAE={best_mae:.4f} (baseline={baseline_mae:.4f})")
+    print(
+        f"    Best: k1={best_k1:.3f}, k2={best_k2:.3f}, MAE={best_mae:.4f} (baseline={baseline_mae:.4f})"
+    )
     return best_k1, best_k2
 
 
@@ -348,8 +357,12 @@ def main():
     parser.add_argument("--test-dir", default=str(DEFAULT_TEST_DIR))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--search", action="store_true", help="Run fine grid search per bucket")
-    parser.add_argument("--search-pairs", type=int, default=500, help="Pairs for grid search")
+    parser.add_argument(
+        "--search", action="store_true", help="Run fine grid search per bucket"
+    )
+    parser.add_argument(
+        "--search-pairs", type=int, default=500, help="Pairs for grid search"
+    )
     parser.add_argument(
         "--search-dimensions",
         action="store_true",
@@ -360,9 +373,24 @@ def main():
         default=None,
         help="Path to dimension coefficients JSON (read for inference, write when --search-dimensions)",
     )
-    parser.add_argument("--min-dim-pairs", type=int, default=40, help="Minimum pairs per dimension group")
-    parser.add_argument("--dim-search-pairs", type=int, default=400, help="Pairs per dimension for search")
-    parser.add_argument("--max-dimensions", type=int, default=None, help="Optional cap on searched dimensions")
+    parser.add_argument(
+        "--min-dim-pairs",
+        type=int,
+        default=40,
+        help="Minimum pairs per dimension group",
+    )
+    parser.add_argument(
+        "--dim-search-pairs",
+        type=int,
+        default=400,
+        help="Pairs per dimension for search",
+    )
+    parser.add_argument(
+        "--max-dimensions",
+        type=int,
+        default=None,
+        help="Optional cap on searched dimensions",
+    )
     parser.add_argument(
         "--identity-buckets",
         default="",
@@ -440,19 +468,23 @@ def main():
         coeff_path.write_text(json.dumps(dim_report, indent=2))
         dimension_coefficients = load_dimension_coefficients(coeff_path)
         dimension_coeff_path = coeff_path
-        print(f"Saved dimension coefficients: {coeff_path} ({len(dimension_coefficients)} dimensions)")
+        print(
+            f"Saved dimension coefficients: {coeff_path} ({len(dimension_coefficients)} dimensions)"
+        )
     elif args.dimension_coeffs_path:
         coeff_path = Path(args.dimension_coeffs_path).expanduser().resolve()
         if coeff_path.exists():
             dimension_coefficients = load_dimension_coefficients(coeff_path)
             dimension_coeff_path = coeff_path
-            print(f"Loaded dimension coefficients: {coeff_path} ({len(dimension_coefficients)} dimensions)")
+            print(
+                f"Loaded dimension coefficients: {coeff_path} ({len(dimension_coefficients)} dimensions)"
+            )
         else:
             print(f"WARNING: dimension coefficients file not found: {coeff_path}")
 
     test_files = sorted([f for f in os.listdir(test_dir) if f.endswith(".jpg")])
     if args.limit:
-        test_files = test_files[:args.limit]
+        test_files = test_files[: args.limit]
 
     print(f"\nTest images: {len(test_files)}")
 
@@ -500,7 +532,9 @@ def main():
             corrected = apply_undistortion(img, k1, k2)
 
         out_path = corrected_dir / fname
-        cv2.imwrite(str(out_path), corrected, [cv2.IMWRITE_JPEG_QUALITY, args.jpeg_quality])
+        cv2.imwrite(
+            str(out_path), corrected, [cv2.IMWRITE_JPEG_QUALITY, args.jpeg_quality]
+        )
 
         if (i + 1) % 100 == 0 or (i + 1) == len(test_files):
             elapsed = time.time() - t0
@@ -510,9 +544,9 @@ def main():
                 f"{bucket}/{coeff_source} (k1={k1:.3f}, k2={k2:.3f})"
             )
 
-    print(f"\n=== RESULTS ===")
+    print("\n=== RESULTS ===")
     print(f"Total time: {time.time() - t0:.1f}s")
-    print(f"\nBucket distribution:")
+    print("\nBucket distribution:")
     for bucket, count in bucket_counts.most_common():
         k1, k2 = bucket_coefficients[bucket]
         pct = count / len(test_files) * 100
@@ -529,7 +563,7 @@ def main():
     # Create zip
     zip_path = output_dir / zip_name
     print(f"\nCreating zip: {zip_path}")
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zf:
         for fname in test_files:
             fpath = corrected_dir / fname
             if fpath.exists():
@@ -547,7 +581,9 @@ def main():
         "jpeg_quality": args.jpeg_quality,
         "identity_buckets": sorted(identity_buckets),
         "safe_fallback": bool(args.safe_fallback),
-        "dimension_coefficients_path": str(dimension_coeff_path) if dimension_coeff_path else None,
+        "dimension_coefficients_path": str(dimension_coeff_path)
+        if dimension_coeff_path
+        else None,
         "dimension_coefficients_count": len(dimension_coefficients),
         "coefficient_source_counts": dict(source_counts),
         "bucket_coefficients": {

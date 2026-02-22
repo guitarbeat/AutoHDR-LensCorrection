@@ -31,7 +31,7 @@ Build an automated lens distortion correction pipeline for wide-angle real estat
 
 ## 3. Submission Pipeline
 
-```
+```text
 Corrected images (.jpg) → zip → upload to bounty.autohdr.com → download submission.csv → submit to Kaggle
 ```
 
@@ -52,6 +52,7 @@ The scoring is external — we never compute the final Kaggle score ourselves. b
 | **5 PM tomorrow** | Hard deadline | Submit |
 
 **Bail-out rules:**
+
 - If U-Net epoch time > 30 min → switch to Kaggle T4 GPU or abandon U-Net
 - If no method beats v1 (24.00) by midnight → focus on per-image optimization with more candidates
 - If per-image optimization proxy doesn't correlate with scoring → try training-pair MAE as proxy instead
@@ -61,7 +62,8 @@ The scoring is external — we never compute the final Kaggle score ourselves. b
 ## 4. Phase Log
 
 ### Phase 0: Triage & Dataset Check ✅
-*Completed ~5:30 PM*
+
+#### Completed ~5:30 PM
 
 - Verified dataset exists on external SSD (46,238 train files, 1,000 test)
 - Confirmed naming conventions differ from codebase assumptions
@@ -151,6 +153,7 @@ Attempted Nelder-Mead optimization on individual images:
 Due to local hardware bottlenecks and Kaggle instability, we are utilizing the **Akash Network** decentralized cloud for our 24-hour training run.
 
 **Workflow:**
+
 1. Generate PyTorch SDL manifest.
 2. Accept provider bid ($<0.50/hr).
 3. Container pulls Jupyter/Dataset dynamically via startup curl script.
@@ -210,28 +213,30 @@ Due to the 37GB size of the dataset, files are strictly split between the local 
 
 ## 9. Gotchas & Bugs Encountered
 
-1.  **Dataloader filename parsing:** Initial code assumed `pair_X/` subdirectories. Actual data uses flat `{uuid}_g{n}_original.jpg` naming. Wasted 30 minutes debugging "0 samples found."
+1. **Dataloader filename parsing:** Initial code assumed `pair_X/` subdirectories. Actual data uses flat `{uuid}_g{n}_original.jpg` naming. Wasted 30 minutes debugging "0 samples found."
 
-2.  **ViT model was never trained:** The original codebase had a ViT with random weights. The walkthrough document from the prior session incorrectly claimed it was functional. Always verify with an actual forward pass.
+2. **ViT model was never trained:** The original codebase had a ViT with random weights. The walkthrough document from the prior session incorrectly claimed it was functional. Always verify with an actual forward pass.
 
-3.  **`app.py` self-comparison:** The evaluation endpoint compared `corrected_image` to itself, guaranteeing perfect metrics. This masked the fact that nothing was working.
+3. **`app.py` self-comparison:** The evaluation endpoint compared `corrected_image` to itself, guaranteeing perfect metrics. This masked the fact that nothing was working.
 
-4.  **MPS `pin_memory` warning:** PyTorch's `pin_memory=True` is not supported on Apple Silicon MPS. It doesn't crash, but emits a warning every epoch. Set `pin_memory=False` to suppress.
+4. **MPS `pin_memory` warning:** PyTorch's `pin_memory=True` is not supported on Apple Silicon MPS. It doesn't crash, but emits a warning every epoch. Set `pin_memory=False` to suppress.
 
-5.  **SSD I/O bottleneck:** Loading 46K filenames from the SSD for `os.listdir()` takes several seconds. The `--max-train` flag was added to `train.py` to limit the initial scan.
+5. **SSD I/O bottleneck:** Loading 46K filenames from the SSD for `os.listdir()` takes several seconds. The `--max-train` flag was added to `train.py` to limit the initial scan.
 
-6.  **Image dimension mismatch:** Some OpenCV `undistort` outputs have slightly different dimensions than inputs due to `getOptimalNewCameraMatrix`. Always resize back to the original dimensions before saving.
+6. **Image dimension mismatch:** Some OpenCV `undistort` outputs have slightly different dimensions than inputs due to `getOptimalNewCameraMatrix`. Always resize back to the original dimensions before saving.
 
 ---
 
 ### Open Investigations & Next Steps
 
 #### 1. Zero-Score Analysis (Partially Solved)
+
 - **Problem**: 17.8% of images (178/1000) scored perfectly zero in v1.
 - **Breakthrough**: Analysis revealed these images universally had **non-standard dimensions** (e.g., 1363x2048, 1371x2048) or **portrait orientations** (2048x1360).
 - **Fix**: The `v4` dimension-aware classifier (categorizing images into standard, near-standard, nonstandard, portrait) reduced zeros from 178 to 143 and boosted the overall mean to **29.64**.
 - **Remaining Question**: 143 images are still scoring zero. What characterizes these remaining failures?
 
 #### 2. The Kaggle U-Net
+
 - MPS was too slow (hanging). Code is fully prepped (`backend/scripts/kaggle_unet_train.py`) with data augmentation and Sobel edge-aware loss.
 - Ready to be launched on Kaggle T4 GPUs.

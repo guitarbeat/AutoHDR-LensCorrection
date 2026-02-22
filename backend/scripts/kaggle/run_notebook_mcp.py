@@ -8,7 +8,7 @@ import json
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import requests
 
@@ -46,11 +46,15 @@ class KaggleMCPClient:
             "content-type": "application/json",
             "authorization": f"Bearer {self.token}",
         }
-        response = requests.post(self.url, headers=headers, json=payload, timeout=self.timeout)
+        response = requests.post(
+            self.url, headers=headers, json=payload, timeout=self.timeout
+        )
         response.raise_for_status()
         events = parse_sse_json(response.text)
         if not events:
-            raise RuntimeError(f"No MCP data events returned. Raw response: {response.text[:500]}")
+            raise RuntimeError(
+                f"No MCP data events returned. Raw response: {response.text[:500]}"
+            )
         event = events[-1]
         if "error" in event:
             raise RuntimeError(f"MCP error: {event['error']}")
@@ -69,7 +73,9 @@ class KaggleMCPClient:
         }
         return self._rpc(payload)
 
-    def call_tool(self, name: str, arguments: Optional[dict] = None, request_id: int = 2) -> dict:
+    def call_tool(
+        self, name: str, arguments: Optional[dict] = None, request_id: int = 2
+    ) -> dict:
         payload = {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -154,7 +160,9 @@ def notebook_summary(info: dict) -> dict:
     metadata = info.get("metadata") or {}
     return {
         "ref": metadata.get("ref"),
-        "url": f"https://www.kaggle.com/code/{metadata.get('ref')}" if metadata.get("ref") else None,
+        "url": f"https://www.kaggle.com/code/{metadata.get('ref')}"
+        if metadata.get("ref")
+        else None,
         "kernel_id": metadata.get("id"),
         "slug": metadata.get("slug"),
         "title": metadata.get("title"),
@@ -184,7 +192,9 @@ def run_notebook(
         source_origin = str(nb_path)
 
     if not source:
-        raise RuntimeError("Notebook metadata/source not returned by get_notebook_info.")
+        raise RuntimeError(
+            "Notebook metadata/source not returned by get_notebook_info."
+        )
 
     request = {
         "id": metadata["id"],
@@ -287,9 +297,15 @@ def run_and_wait(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Kaggle notebooks via MCP")
     parser.add_argument("--owner", default="alwoods", help="Kaggle owner username")
-    parser.add_argument("--slug", default="train-unet-lens-correction", help="Notebook slug")
-    parser.add_argument("--enable-gpu", action="store_true", help="Enable GPU during save-and-run")
-    parser.add_argument("--wait-timeout-min", type=int, default=60, help="Max wait for run-and-wait")
+    parser.add_argument(
+        "--slug", default="train-unet-lens-correction", help="Notebook slug"
+    )
+    parser.add_argument(
+        "--enable-gpu", action="store_true", help="Enable GPU during save-and-run"
+    )
+    parser.add_argument(
+        "--wait-timeout-min", type=int, default=60, help="Max wait for run-and-wait"
+    )
     parser.add_argument(
         "--poll-interval-sec",
         type=int,
@@ -354,7 +370,11 @@ def main() -> None:
         output = get_notebook_session_output(client, args.owner, args.slug)
         entries = parse_session_log_entries(output)
         tail_entries = entries[-max(args.log_tail_lines, 0) :]
-        tail_lines = [str(entry.get("data", "")).rstrip("\n") for entry in tail_entries if entry.get("data")]
+        tail_lines = [
+            str(entry.get("data", "")).rstrip("\n")
+            for entry in tail_entries
+            if entry.get("data")
+        ]
         result = {
             "timestamp_utc": utc_now(),
             "owner": args.owner,

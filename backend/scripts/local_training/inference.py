@@ -38,7 +38,9 @@ def choose_device(prefer: str) -> torch.device:
 def parse_args() -> argparse.Namespace:
     cfg = get_config()
     parser = argparse.ArgumentParser(description="U-Net inference for lens correction")
-    parser.add_argument("--checkpoint", required=True, help="Path to model checkpoint (.pt)")
+    parser.add_argument(
+        "--checkpoint", required=True, help="Path to model checkpoint (.pt)"
+    )
     parser.add_argument("--test-dir", default=str(cfg.test_dir))
     parser.add_argument(
         "--output-root",
@@ -50,8 +52,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional deterministic run name (default: checkpoint stem)",
     )
-    parser.add_argument("--img-size", type=int, default=None, help="Override checkpoint image size")
-    parser.add_argument("--limit", type=int, default=None, help="Limit number of test images")
+    parser.add_argument(
+        "--img-size", type=int, default=None, help="Override checkpoint image size"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Limit number of test images"
+    )
     parser.add_argument(
         "--device",
         choices=["auto", "cuda", "mps", "cpu"],
@@ -89,7 +95,9 @@ def correct_image(
 
     orig_h, orig_w = original.shape[:2]
     pil_img = Image.fromarray(cv2.cvtColor(original, cv2.COLOR_BGR2RGB))
-    tfm = transforms.Compose([transforms.Resize((img_size, img_size)), transforms.ToTensor()])
+    tfm = transforms.Compose(
+        [transforms.Resize((img_size, img_size)), transforms.ToTensor()]
+    )
     tensor = tfm(pil_img).unsqueeze(0).to(device)
 
     with torch.no_grad():
@@ -100,12 +108,16 @@ def correct_image(
     pred_bgr = cv2.cvtColor(pred_np, cv2.COLOR_RGB2BGR)
 
     if pred_bgr.shape[0] != orig_h or pred_bgr.shape[1] != orig_w:
-        pred_bgr = cv2.resize(pred_bgr, (orig_w, orig_h), interpolation=cv2.INTER_LANCZOS4)
+        pred_bgr = cv2.resize(
+            pred_bgr, (orig_w, orig_h), interpolation=cv2.INTER_LANCZOS4
+        )
 
     return pred_bgr
 
 
-def build_output_layout(output_root: Path, checkpoint_path: Path, run_name: Optional[str]) -> dict:
+def build_output_layout(
+    output_root: Path, checkpoint_path: Path, run_name: Optional[str]
+) -> dict:
     name = run_name or checkpoint_path.stem
     run_dir = ensure_dir(output_root / "inference" / name)
     corrected_dir = ensure_dir(run_dir / "corrected")

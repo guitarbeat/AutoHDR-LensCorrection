@@ -1,6 +1,6 @@
 # AutoHDR Execution Runbook
 
-> **Last Updated (CST):** February 22, 2026 4:36 AM CST  
+> **Last Updated (CST):** February 22, 2026 7:56 AM CST  
 > **Hackathon Window:** February 21, 2026 5:00 PM CST → February 22, 2026 5:00 PM CST  
 > **Competition:** [Kaggle — Automatic Lens Correction](https://www.kaggle.com/competitions/automatic-lens-correction)  
 > **Scoring Portal:** [bounty.autohdr.com](https://bounty.autohdr.com/)
@@ -113,6 +113,7 @@ We do not compute the final hidden competition score locally.
 Operationally, bounty scoring should be treated as **external and composite**; use real scored submissions as the final arbiter.
 
 Practical rule:
+
 - Use MAE/SSIM/PSNR for local diagnostics only.
 - Promote methods based on real score deltas, not proxy wins alone.
 
@@ -605,6 +606,7 @@ Notebook: `alwoods/train-unet-lens-correction`
 4. v11: `COMPLETE` at ~09:40 UTC with training artifacts present.
 
 Observed v11 output artifacts (Kaggle session files):
+
 - `best_model.pt`
 - `training_history.json`
 - `checkpoint_epoch*.pt`
@@ -673,3 +675,16 @@ Input scored CSV: `/Users/aaron/Desktop/AutoHDR/v11_submission.csv`
    - Two concurrent `bounty_submit.py` processes were observed uploading the same zip in parallel.
    - One duplicate process was terminated to prevent duplicate scoring jobs.
    - New operational rule: one active bounty submit process per artifact.
+
+### 12.9 Linting and cleanup pass learnings (February 22, 2026)
+
+1. Python cleanup:
+   - Ran `ruff check --fix` across tracked Python files and then `ruff format`.
+   - Result: consistent import ordering and formatting across backend scripts/tests and helper tooling.
+2. Markdown linting:
+   - Ran `markdownlint-cli` across tracked Markdown files.
+   - Legacy docs (`plan.md` and archived notes) contain intentional long operational lines, so strict `MD013` is noisy for this repo.
+   - Practical policy: lint Markdown with `MD013` and `MD041` disabled unless a future doc style guide explicitly enforces hard wrapping.
+3. Repo hygiene lesson:
+   - Parallel worktrees/copies created many duplicate numbered files in prior runs.
+   - `git clean -fd` after branch checkpointing is an effective way to recover a clean workspace safely.

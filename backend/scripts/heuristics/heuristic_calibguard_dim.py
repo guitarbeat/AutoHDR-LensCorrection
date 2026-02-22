@@ -73,7 +73,9 @@ def apply_undistortion(
         border_mode=border_mode,
     )
     if corrected.shape[:2] != (height, width):
-        corrected = cv2.resize(corrected, (width, height), interpolation=cv2.INTER_LANCZOS4)
+        corrected = cv2.resize(
+            corrected, (width, height), interpolation=cv2.INTER_LANCZOS4
+        )
     return corrected
 
 
@@ -125,7 +127,9 @@ def _coeff_pair(source: dict[str, Any], key: str) -> tuple[float, float] | None:
     return float(node["k1"]), float(node["k2"])
 
 
-def _coeff_triplet(source: dict[str, Any], key: str, default_alpha: float = 0.0) -> tuple[float, float, float] | None:
+def _coeff_triplet(
+    source: dict[str, Any], key: str, default_alpha: float = 0.0
+) -> tuple[float, float, float] | None:
     node = source.get(key)
     if not isinstance(node, dict):
         return None
@@ -153,13 +157,30 @@ def choose_coeffs(
         parent_safe = _coeff_triplet(parent_entry, "safe", default_alpha=default_alpha)
         if parent_safe is not None:
             return parent_safe[0], parent_safe[1], parent_safe[2], "parent_safe"
-        return float(global_fallback["k1"]), float(global_fallback["k2"]), default_alpha, "global_fallback"
+        return (
+            float(global_fallback["k1"]),
+            float(global_fallback["k2"]),
+            default_alpha,
+            "global_fallback",
+        )
 
     def fallback_primary() -> tuple[float, float, float, str]:
-        parent_primary = _coeff_triplet(parent_entry, "primary", default_alpha=default_alpha)
+        parent_primary = _coeff_triplet(
+            parent_entry, "primary", default_alpha=default_alpha
+        )
         if parent_primary is not None:
-            return parent_primary[0], parent_primary[1], parent_primary[2], "parent_primary"
-        return float(global_fallback["k1"]), float(global_fallback["k2"]), default_alpha, "global_fallback"
+            return (
+                parent_primary[0],
+                parent_primary[1],
+                parent_primary[2],
+                "parent_primary",
+            )
+        return (
+            float(global_fallback["k1"]),
+            float(global_fallback["k2"]),
+            default_alpha,
+            "global_fallback",
+        )
 
     if entry is None:
         if profile == "aggressive":
@@ -173,7 +194,9 @@ def choose_coeffs(
     primary = _coeff_triplet(entry, "primary", default_alpha=default_alpha)
     safe = _coeff_triplet(entry, "safe", default_alpha=default_alpha)
     support = int(entry.get("support", 0))
-    guardrails = entry.get("guardrails", {}) if isinstance(entry.get("guardrails"), dict) else {}
+    guardrails = (
+        entry.get("guardrails", {}) if isinstance(entry.get("guardrails"), dict) else {}
+    )
     force_safe = bool(guardrails.get("force_safe", False))
 
     if safe is None:
@@ -221,7 +244,11 @@ def choose_render_settings(
     cli_interp: str | None,
     cli_border_mode: str | None,
 ) -> tuple[str, str]:
-    table_defaults = table.get("render_defaults", {}) if isinstance(table.get("render_defaults"), dict) else {}
+    table_defaults = (
+        table.get("render_defaults", {})
+        if isinstance(table.get("render_defaults"), dict)
+        else {}
+    )
     interp = str(table_defaults.get("interp", "linear")).strip().lower()
     border_mode = str(table_defaults.get("border_mode", "constant")).strip().lower()
 
@@ -244,13 +271,19 @@ def choose_render_settings(
 
 def main() -> None:
     cfg = get_config()
-    default_table = cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_table.json"
-    default_manifest = cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_manifest.json"
+    default_table = (
+        cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_table.json"
+    )
+    default_manifest = (
+        cfg.repo_root / "backend/scripts/heuristics/calibguard_dim_manifest.json"
+    )
 
     parser = argparse.ArgumentParser(description="CalibGuard-Dim heuristic inference")
     parser.add_argument("--test-dir", default=str(cfg.test_dir))
     parser.add_argument("--table", default=str(default_table))
-    parser.add_argument("--profile", choices=["safe", "balanced", "aggressive"], default="safe")
+    parser.add_argument(
+        "--profile", choices=["safe", "balanced", "aggressive"], default="safe"
+    )
     parser.add_argument("--output-dir", default=str(cfg.output_root))
     parser.add_argument("--artifact-tag", default="calibguard_dim")
     parser.add_argument("--manifest", default=str(default_manifest))
@@ -288,7 +321,9 @@ def main() -> None:
     if args.limit:
         test_files = test_files[: args.limit]
 
-    corrected_dir = ensure_dir(output_dir / f"corrected_calibguard_dim_{args.profile}_{timestamp}")
+    corrected_dir = ensure_dir(
+        output_dir / f"corrected_calibguard_dim_{args.profile}_{timestamp}"
+    )
 
     route_counts: Counter[str] = Counter()
     parent_counts: Counter[str] = Counter()
@@ -333,7 +368,9 @@ def main() -> None:
         if corrected.shape[:2] != (h, w):
             corrected = cv2.resize(corrected, (w, h), interpolation=cv2.INTER_LANCZOS4)
 
-        cv2.imwrite(str(corrected_dir / fname), corrected, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        cv2.imwrite(
+            str(corrected_dir / fname), corrected, [cv2.IMWRITE_JPEG_QUALITY, 95]
+        )
 
         route_counts[route] += 1
         parent_counts[parent] += 1

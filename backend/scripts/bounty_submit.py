@@ -207,9 +207,13 @@ def wait_for_score(
 
         if status == "COMPLETED":
             if status_payload.get("success") is False:
-                raise SubmissionError(f"Scoring completed with failure: {detail or status_payload}")
+                raise SubmissionError(
+                    f"Scoring completed with failure: {detail or status_payload}"
+                )
             if "csv" not in status_payload:
-                raise SubmissionError(f"COMPLETED response missing csv payload: {status_payload}")
+                raise SubmissionError(
+                    f"COMPLETED response missing csv payload: {status_payload}"
+                )
             print(f"Scoring completed in {elapsed:.1f}s")
             return status_payload
 
@@ -246,7 +250,9 @@ def write_outputs(
             "success": status_payload.get("success"),
             "summary": status_payload.get("summary"),
         }
-        out_summary_json.write_text(json.dumps(summary_payload, indent=2), encoding="utf-8")
+        out_summary_json.write_text(
+            json.dumps(summary_payload, indent=2), encoding="utf-8"
+        )
         print(f"Wrote summary JSON: {out_summary_json}")
 
     summary = status_payload.get("summary")
@@ -284,8 +290,12 @@ def main() -> None:
         validate_args(args)
         base_url = args.base_url.rstrip("/")
         zip_path = args.zip_file.resolve()
-        out_csv = args.out_csv.resolve() if args.out_csv else default_output_csv(zip_path)
-        out_summary_json = args.out_summary_json.resolve() if args.out_summary_json else None
+        out_csv = (
+            args.out_csv.resolve() if args.out_csv else default_output_csv(zip_path)
+        )
+        out_summary_json = (
+            args.out_summary_json.resolve() if args.out_summary_json else None
+        )
 
         with requests.Session() as session:
             s3_key = upload_zip(

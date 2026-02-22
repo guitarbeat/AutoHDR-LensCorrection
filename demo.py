@@ -89,10 +89,14 @@ def _draw_labeled_pair(
     return canvas
 
 
-def _build_diff_heatmap(original_rgb: np.ndarray, corrected_rgb: np.ndarray) -> tuple[np.ndarray, float, float]:
+def _build_diff_heatmap(
+    original_rgb: np.ndarray, corrected_rgb: np.ndarray
+) -> tuple[np.ndarray, float, float]:
     h, w = original_rgb.shape[:2]
     if corrected_rgb.shape[:2] != (h, w):
-        corrected_rgb = cv2.resize(corrected_rgb, (w, h), interpolation=cv2.INTER_LINEAR)
+        corrected_rgb = cv2.resize(
+            corrected_rgb, (w, h), interpolation=cv2.INTER_LINEAR
+        )
 
     diff_rgb = cv2.absdiff(original_rgb, corrected_rgb)
     diff_gray = cv2.cvtColor(diff_rgb, cv2.COLOR_RGB2GRAY)
@@ -106,14 +110,18 @@ def _build_diff_heatmap(original_rgb: np.ndarray, corrected_rgb: np.ndarray) -> 
     return heatmap_rgb, float(diff_gray.mean()), float(diff_gray.max())
 
 
-def _build_radial_curve_plot(k1: float, k2: float, width: int = 640, height: int = 360) -> np.ndarray:
+def _build_radial_curve_plot(
+    k1: float, k2: float, width: int = 640, height: int = 360
+) -> np.ndarray:
     canvas = np.full((height, width, 3), 252, dtype=np.uint8)
     margin = 56
     graph_w = width - 2 * margin
     graph_h = height - 2 * margin
     y_max = 1.35
 
-    cv2.rectangle(canvas, (margin, margin), (width - margin, height - margin), (220, 220, 220), 1)
+    cv2.rectangle(
+        canvas, (margin, margin), (width - margin, height - margin), (220, 220, 220), 1
+    )
 
     radii = np.linspace(0.0, 1.0, 220)
     distorted = radii * (1.0 + k1 * radii**2 + k2 * radii**4)
@@ -125,7 +133,9 @@ def _build_radial_curve_plot(k1: float, k2: float, width: int = 640, height: int
 
     identity_pts = np.column_stack((x, y_identity)).reshape((-1, 1, 2))
     curve_pts = np.column_stack((x, y_distorted)).reshape((-1, 1, 2))
-    cv2.polylines(canvas, [identity_pts], isClosed=False, color=(170, 170, 170), thickness=2)
+    cv2.polylines(
+        canvas, [identity_pts], isClosed=False, color=(170, 170, 170), thickness=2
+    )
     cv2.polylines(canvas, [curve_pts], isClosed=False, color=(36, 87, 255), thickness=3)
 
     cv2.putText(
@@ -189,11 +199,17 @@ def process_image(input_image: np.ndarray, k1: float, k2: float):
         (input_image.shape[1], input_image.shape[0]),
         interpolation=cv2.INTER_LINEAR,
     )
-    comparison = _draw_labeled_pair(input_image, resized_corrected, "Original", "Corrected")
-    heatmap, mean_abs_error, max_abs_error = _build_diff_heatmap(input_image, resized_corrected)
+    comparison = _draw_labeled_pair(
+        input_image, resized_corrected, "Original", "Corrected"
+    )
+    heatmap, mean_abs_error, max_abs_error = _build_diff_heatmap(
+        input_image, resized_corrected
+    )
 
     edge_before = cv2.Canny(cv2.cvtColor(input_image, cv2.COLOR_RGB2GRAY), 100, 200)
-    edge_after = cv2.Canny(cv2.cvtColor(resized_corrected, cv2.COLOR_RGB2GRAY), 100, 200)
+    edge_after = cv2.Canny(
+        cv2.cvtColor(resized_corrected, cv2.COLOR_RGB2GRAY), 100, 200
+    )
     edge_before_density = float(np.mean(edge_before > 0))
     edge_after_density = float(np.mean(edge_after > 0))
     kept_area_ratio = (info["new_shape"][0] * info["new_shape"][1]) / (
@@ -254,7 +270,9 @@ def create_demo() -> gr.Blocks:
                         info="Secondary radial term",
                     )
                 with gr.Row():
-                    submit_btn = gr.Button("Apply Geometric Correction", variant="primary")
+                    submit_btn = gr.Button(
+                        "Apply Geometric Correction", variant="primary"
+                    )
                     reset_btn = gr.Button("Reset to Best Coefficients")
                 if examples:
                     gr.Markdown("### Example images")
@@ -277,7 +295,13 @@ def create_demo() -> gr.Blocks:
         submit_btn.click(
             fn=process_image,
             inputs=[input_img, k1_slider, k2_slider],
-            outputs=[output_img, comparison_img, heatmap_img, radial_curve_img, output_stats],
+            outputs=[
+                output_img,
+                comparison_img,
+                heatmap_img,
+                radial_curve_img,
+                output_stats,
+            ],
         )
         reset_btn.click(fn=reset_coefficients, outputs=[k1_slider, k2_slider])
     return app

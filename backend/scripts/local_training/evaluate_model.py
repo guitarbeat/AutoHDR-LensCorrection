@@ -40,9 +40,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root", default=str(cfg.output_root))
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--img-size", type=int, default=None, help="Override checkpoint image size")
-    parser.add_argument("--max-val", type=int, default=None, help="Limit validation samples")
-    parser.add_argument("--device", choices=["auto", "cuda", "mps", "cpu"], default="auto")
+    parser.add_argument(
+        "--img-size", type=int, default=None, help="Override checkpoint image size"
+    )
+    parser.add_argument(
+        "--max-val", type=int, default=None, help="Limit validation samples"
+    )
+    parser.add_argument(
+        "--device", choices=["auto", "cuda", "mps", "cpu"], default="auto"
+    )
     return parser.parse_args()
 
 
@@ -55,7 +61,9 @@ def main() -> None:
     output_root = ensure_dir(Path(args.output_root).expanduser().resolve())
     eval_dir = ensure_dir(output_root / "evaluation")
     require_existing_dir(data_root, "Dataset root")
-    require_existing_dir(data_root / "lens-correction-train-cleaned", "Training images directory")
+    require_existing_dir(
+        data_root / "lens-correction-train-cleaned", "Training images directory"
+    )
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model_name = str(checkpoint.get("model_name", "micro_unet")).lower()
@@ -91,8 +99,12 @@ def main() -> None:
             pred_np = predicted.cpu().numpy()
             gt_np = generated.cpu().numpy()
             for i in range(pred_np.shape[0]):
-                pred_img = np.clip(pred_np[i].transpose(1, 2, 0) * 255.0, 0, 255).astype(np.uint8)
-                gt_img = np.clip(gt_np[i].transpose(1, 2, 0) * 255.0, 0, 255).astype(np.uint8)
+                pred_img = np.clip(
+                    pred_np[i].transpose(1, 2, 0) * 255.0, 0, 255
+                ).astype(np.uint8)
+                gt_img = np.clip(gt_np[i].transpose(1, 2, 0) * 255.0, 0, 255).astype(
+                    np.uint8
+                )
                 maes.append(calculate_mae(pred_img, gt_img))
                 psnrs.append(calculate_psnr(pred_img, gt_img))
                 ssims.append(calculate_ssim(pred_img, gt_img))
