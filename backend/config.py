@@ -85,9 +85,21 @@ def ensure_dir(path: Path) -> Path:
 
 
 def require_kaggle_token(config: AutoHDRConfig) -> str:
-    if not config.kaggle_api_token:
-        raise RuntimeError(
-            "KAGGLE_API_TOKEN is required for Kaggle MCP operations.\n"
-            "Set it in your shell or .env."
-        )
-    return config.kaggle_api_token
+    if config.kaggle_api_token:
+        return config.kaggle_api_token
+
+    token_candidates = [
+        Path.home() / ".kaggle" / "access_token",
+        Path.home() / ".config" / "kaggle" / "access_token",
+    ]
+    for candidate in token_candidates:
+        if not candidate.exists():
+            continue
+        token = candidate.read_text(encoding="utf-8").strip()
+        if token:
+            return token
+
+    raise RuntimeError(
+        "Kaggle token not found for Kaggle MCP operations.\n"
+        "Set KAGGLE_API_TOKEN in your shell/.env, or ensure ~/.kaggle/access_token exists."
+    )

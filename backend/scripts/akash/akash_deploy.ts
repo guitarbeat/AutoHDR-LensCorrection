@@ -19,6 +19,9 @@ export type DeployConfig = {
     trainRepoUrl: string;
     trainEntrypoint: string;
     trainingMode: TrainingMode;
+    providerDenylist: Set<string>;
+    kaggleDownloadMaxAttempts: number;
+    kaggleDownloadRetrySeconds: number;
 };
 
 export type DeployResult = {
@@ -74,6 +77,24 @@ function parsePositiveInt(name: string, raw: string): number {
 
 function shellSingleQuote(value: string): string {
     return `'${value.replace(/'/g, `'\"'\"'`)}'`;
+}
+
+function parseOptionalInt(name: string, raw: string | undefined, fallback: number): number {
+    if (!raw || !raw.trim()) return fallback;
+    const parsed = Number.parseInt(raw.trim(), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+        throw new Error(`Invalid ${name} value '${raw}'`);
+    }
+    return parsed;
+}
+
+function parseProviderDenylist(raw: string): Set<string> {
+    return new Set(
+        raw
+            .split(",")
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+    );
 }
 
 function derivePerJobCapAktPerHour(env: NodeJS.ProcessEnv): number {
@@ -136,6 +157,27 @@ export function resolveDeployConfig(
         overrides.depositAmount ?? parsePositiveFloat("AKASH_DEPOSIT_AMOUNT", (env.AKASH_DEPOSIT_AMOUNT || "5").trim());
 
     const trainingMode: TrainingMode = trainScriptUrl ? "remote_script" : "repo_fallback";
+    const providerDenylist = overrides.providerDenylist ?? parseProviderDenylist(env.AKASH_PROVIDER_DENYLIST || "");
+    const kaggleDownloadMaxAttempts =
+        overrides.kaggleDownloadMaxAttempts ??
+        parseOptionalInt(
+            "AKASH_KAGGLE_DOWNLOAD_MAX_ATTEMPTS",
+            env.AKASH_KAGGLE_DOWNLOAD_MAX_ATTEMPTS,
+            30
+        );
+    if (!Number.isFinite(kaggleDownloadMaxAttempts) || kaggleDownloadMaxAttempts <= 0) {
+        throw new Error(`Invalid kaggleDownloadMaxAttempts value '${kaggleDownloadMaxAttempts}'`);
+    }
+    const kaggleDownloadRetrySeconds =
+        overrides.kaggleDownloadRetrySeconds ??
+        parseOptionalInt(
+            "AKASH_KAGGLE_DOWNLOAD_RETRY_SECONDS",
+            env.AKASH_KAGGLE_DOWNLOAD_RETRY_SECONDS,
+            60
+        );
+    if (!Number.isFinite(kaggleDownloadRetrySeconds) || kaggleDownloadRetrySeconds <= 0) {
+        throw new Error(`Invalid kaggleDownloadRetrySeconds value '${kaggleDownloadRetrySeconds}'`);
+    }
     return {
         apiKey,
         profileName,
@@ -150,21 +192,31 @@ export function resolveDeployConfig(
         trainRepoUrl,
         trainEntrypoint,
         trainingMode,
+        providerDenylist,
+        kaggleDownloadMaxAttempts,
+        kaggleDownloadRetrySeconds,
     };
 }
 
 function buildKaggleAuthCommand(config: DeployConfig): string {
     if (config.kaggleAuthMode === "token") {
-        return `export KAGGLE_API_TOKEN=${shellSingleQuote(config.kaggleToken || "")}`;
+        return [
+            "mkdir -p ~/.kaggle ~/.config/kaggle",
+            `export KAGGLE_API_TOKEN=${shellSingleQuote(config.kaggleToken || "")}`,
+            "export KAGGLE_CONFIG_DIR=~/.config/kaggle",
+        ].join(" && ");
     }
     const credsJson = JSON.stringify({
         username: config.kaggleUsername || "",
         key: config.kaggleKey || "",
     });
     return [
-        "mkdir -p ~/.kaggle",
+        "mkdir -p ~/.kaggle ~/.config/kaggle",
         `printf %s ${shellSingleQuote(credsJson)} > ~/.kaggle/kaggle.json`,
+        `printf %s ${shellSingleQuote(credsJson)} > ~/.config/kaggle/kaggle.json`,
         "chmod 600 ~/.kaggle/kaggle.json",
+        "chmod 600 ~/.config/kaggle/kaggle.json",
+        "export KAGGLE_CONFIG_DIR=~/.config/kaggle",
     ].join(" && ");
 }
 
@@ -223,13 +275,29 @@ function buildTrainingRuntimeCommand(config: DeployConfig): string {
 }
 
 function buildSDL(config: DeployConfig): string {
+    const kaggleDownloadWithRetry = [
+        `max_attempts=${config.kaggleDownloadMaxAttempts};`,
+        "attempt=1;",
+        "while true; do",
+        "  kaggle competitions download -c automatic-lens-correction && break;",
+        "  if [ \"$attempt\" -ge \"$max_attempts\" ]; then",
+        "    echo \"Kaggle download failed after $attempt attempts\";",
+        "    exit 1;",
+        "  fi;",
+        `  echo \"Kaggle download attempt $attempt failed; retrying in ${config.kaggleDownloadRetrySeconds} seconds...\";`,
+        `  sleep ${config.kaggleDownloadRetrySeconds};`,
+        "  attempt=$((attempt+1));",
+        "done",
+    ].join(" ");
+
     const bootstrapCommands = [
         "set -euo pipefail",
         "export DEBIAN_FRONTEND=noninteractive",
         "apt-get update",
         "apt-get install -y git wget unzip jq curl",
         "rm -rf /var/lib/apt/lists/*",
-        "pip install --no-cache-dir opencv-python-headless kaggle matplotlib seaborn tqdm pillow python-dotenv requests",
+        "pip install --no-cache-dir --ignore-requires-python kaggle==2.0.0",
+        "pip install --no-cache-dir opencv-python-headless matplotlib seaborn tqdm pillow python-dotenv requests",
         "mkdir -p /app/AutoHDR/data /app/AutoHDR/serve",
         "cd /app/AutoHDR",
         buildKaggleAuthCommand(config),
@@ -237,7 +305,7 @@ function buildSDL(config: DeployConfig): string {
         "kaggle competitions files -c automatic-lens-correction --page-size 1 >/tmp/kaggle_preflight.txt",
         "echo 'Kaggle preflight passed.'",
         "echo 'Downloading Kaggle dataset...'",
-        "kaggle competitions download -c automatic-lens-correction",
+        kaggleDownloadWithRetry,
         "unzip -q automatic-lens-correction.zip -d data",
         "rm -f automatic-lens-correction.zip",
         "echo 'Dataset extracted. Launching training/runtime flow...'",
@@ -333,7 +401,11 @@ function parseBidAmountPerBlock(bid: RawBid): number | null {
     return parsed;
 }
 
-function pickAffordableBid(bids: RawBid[], maxAktPerHour: number): { bid: RawBid; aktPerHour: number; amountPerBlock: number } {
+function pickAffordableBid(
+    bids: RawBid[],
+    maxAktPerHour: number,
+    providerDenylist: Set<string>
+): { bid: RawBid; aktPerHour: number; amountPerBlock: number } {
     const affordable = bids
         .map((bid) => {
             const amountPerBlock = parseBidAmountPerBlock(bid);
@@ -342,6 +414,10 @@ function pickAffordableBid(bids: RawBid[], maxAktPerHour: number): { bid: RawBid
             return { bid, aktPerHour, amountPerBlock };
         })
         .filter((item): item is { bid: RawBid; aktPerHour: number; amountPerBlock: number } => item !== null)
+        .filter((item) => {
+            const provider = item.bid.bid?.id?.provider || "";
+            return !providerDenylist.has(provider);
+        })
         .filter((item) => item.aktPerHour <= maxAktPerHour)
         .sort((a, b) => a.amountPerBlock - b.amountPerBlock);
 
@@ -390,7 +466,7 @@ export async function deployToAkash(overrides: Partial<DeployConfig> = {}): Prom
     console.log(`Deployment created: dseq=${dseq}`);
 
     const bids = await waitForBids(config.apiKey, dseq);
-    const picked = pickAffordableBid(bids, config.maxAktPerHour);
+    const picked = pickAffordableBid(bids, config.maxAktPerHour, config.providerDenylist);
     const bid = picked.bid;
 
     const provider = bid.bid?.id?.provider;

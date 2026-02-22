@@ -30,9 +30,7 @@ data/
 *.7z
 
 # Generated outputs (large)
-backend/outputs/corrected_*/
-backend/outputs/*.csv
-backend/outputs/bounty/
+backend/outputs/
 
 # Local scored exports / scratch analysis
 tab*-submission.csv
@@ -40,4 +38,7 @@ scored_*.csv
 execution_brain.md
 backend/scripts/heuristics/pending_variant_diff_analysis.json
 backend/scripts/heuristics/tab_submission_analysis_*.json
+backend/scripts/heuristics/submission_*_manifest*.json
+backend/scripts/heuristics/submission_*_ledger*.json
+backend/scripts/heuristics/*_analysis.json
 logs/akash_matrix_*.json

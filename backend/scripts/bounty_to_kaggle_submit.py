@@ -12,6 +12,7 @@ import shlex
 import subprocess
 import sys
 import time
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -118,6 +119,14 @@ def parse_args() -> argparse.Namespace:
         help="Allow re-submitting a SHA that is already recorded as submitted.",
     )
     parser.add_argument(
+        "--allow-unverified-lineage",
+        action="store_true",
+        help=(
+            "Bypass strict lineage checks (default: block Kaggle submit unless scored CSV "
+            "exactly matches a 1000-JPG source zip)."
+        ),
+    )
+    parser.add_argument(
         "--kaggle-poll-attempts",
         type=int,
         default=18,
@@ -183,9 +192,215 @@ def has_submitted_duplicate(entries: list[dict[str, Any]], sha256: str) -> dict[
     for entry in entries:
         if entry.get("sha256") != sha256:
             continue
-        if entry.get("kaggle_submission_timestamp") or entry.get("bounty_request_id"):
+        has_kaggle_metadata = bool(
+            entry.get("kaggle_submission_timestamp")
+            or entry.get("kaggle_status")
+            or entry.get("kaggle_submission_message")
+            or (
+                "kaggle_public_score" in entry
+                and entry.get("kaggle_public_score") is not None
+            )
+        )
+        if has_kaggle_metadata:
             return entry
     return None
+
+
+def reset_ledger_entry_run_state(entry: dict[str, Any]) -> None:
+    entry["bounty_request_id"] = None
+    entry["kaggle_submission_timestamp"] = None
+    entry["kaggle_public_score"] = None
+    entry["kaggle_status"] = None
+    entry["kaggle_submission_message"] = None
+    entry["kaggle_submit_invoked_at"] = None
+    entry["lineage_verified"] = False
+    entry["lineage_verification_skipped"] = False
+    entry["lineage_zip_jpg_count"] = None
+    entry["lineage_csv_row_count"] = None
+    entry["lineage_summary_avg_score_normalized"] = None
+
+
+def _sample(values: set[str], limit: int = 5) -> list[str]:
+    return sorted(values)[:limit]
+
+
+def load_zip_image_ids(zip_path: Path) -> tuple[set[str], int, int]:
+    image_ids: list[str] = []
+    with zipfile.ZipFile(zip_path) as zf:
+        for name in zf.namelist():
+            lower = name.lower()
+            if not lower.endswith(".jpg"):
+                continue
+            file_name = Path(name).name
+            if not file_name:
+                continue
+            image_ids.append(Path(file_name).stem)
+    unique_ids = set(image_ids)
+    duplicate_count = len(image_ids) - len(unique_ids)
+    return unique_ids, len(image_ids), duplicate_count
+
+
+def load_scored_csv_stats(csv_path: Path) -> tuple[set[str], int, int, float]:
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            raise RuntimeError(f"Scored CSV has no header row: {csv_path}")
+        fieldnames = {name.strip() for name in reader.fieldnames if name}
+        required = {"image_id", "score"}
+        if not required.issubset(fieldnames):
+            raise RuntimeError(
+                "Scored CSV is missing required columns "
+                f"{sorted(required)}: {csv_path} has {sorted(fieldnames)}"
+            )
+        ids: list[str] = []
+        score_sum = 0.0
+        for row in reader:
+            image_id = (row.get("image_id") or "").strip()
+            if not image_id:
+                raise RuntimeError(f"Scored CSV contains blank image_id: {csv_path}")
+            score_text = (row.get("score") or "").strip()
+            if not score_text:
+                raise RuntimeError(f"Scored CSV contains blank score: {csv_path}")
+            try:
+                score_value = float(score_text)
+            except ValueError as exc:
+                raise RuntimeError(
+                    f"Scored CSV contains non-numeric score '{score_text}' in {csv_path}"
+                ) from exc
+            if score_value < 0.0 or score_value > 100.0:
+                raise RuntimeError(
+                    f"Scored CSV contains out-of-range score {score_value:.4f} in {csv_path} "
+                    "(expected range: 0..100)"
+                )
+            ids.append(image_id)
+            score_sum += score_value
+    unique_ids = set(ids)
+    duplicate_count = len(ids) - len(unique_ids)
+    return unique_ids, len(ids), duplicate_count, score_sum
+
+
+def verify_submission_lineage(zip_path: Path, scored_csv_path: Path) -> dict[str, int]:
+    if not zip_path.exists():
+        raise RuntimeError(f"Missing source zip for lineage verification: {zip_path}")
+    if not scored_csv_path.exists():
+        raise RuntimeError(f"Missing scored CSV for lineage verification: {scored_csv_path}")
+
+    zip_ids, zip_row_count, zip_duplicate_count = load_zip_image_ids(zip_path)
+    csv_ids, csv_row_count, csv_duplicate_count, _ = load_scored_csv_stats(scored_csv_path)
+
+    if zip_row_count != 1000:
+        raise RuntimeError(
+            f"Lineage check failed: source zip must contain exactly 1000 JPG files, found {zip_row_count} in {zip_path}"
+        )
+    if zip_duplicate_count:
+        raise RuntimeError(
+            "Lineage check failed: source zip contains duplicate image IDs "
+            f"(count={zip_duplicate_count}) in {zip_path}"
+        )
+    if csv_row_count != 1000:
+        raise RuntimeError(
+            f"Lineage check failed: scored CSV must contain exactly 1000 rows, found {csv_row_count} in {scored_csv_path}"
+        )
+    if csv_duplicate_count:
+        raise RuntimeError(
+            "Lineage check failed: scored CSV contains duplicate image_id rows "
+            f"(count={csv_duplicate_count}) in {scored_csv_path}"
+        )
+
+    missing_ids = zip_ids - csv_ids
+    extra_ids = csv_ids - zip_ids
+    if missing_ids or extra_ids:
+        raise RuntimeError(
+            "Lineage check failed: scored CSV image set does not match ZIP image set "
+            f"(missing_from_csv={len(missing_ids)} sample={_sample(missing_ids)} "
+            f"extra_in_csv={len(extra_ids)} sample={_sample(extra_ids)})"
+        )
+
+    print(
+        "Lineage verified:"
+        f" zip_jpg_count={zip_row_count} csv_rows={csv_row_count} matched_ids={len(zip_ids)}"
+    )
+    return {
+        "zip_jpg_count": zip_row_count,
+        "csv_row_count": csv_row_count,
+        "matched_ids": len(zip_ids),
+    }
+
+
+def verify_csv_matches_bounty_summary(scored_csv_path: Path, summary_json_path: Path) -> dict[str, float]:
+    if not summary_json_path.exists():
+        raise RuntimeError(
+            "Lineage check failed: bounty summary JSON missing; cannot verify scored CSV provenance "
+            f"({summary_json_path})"
+        )
+    try:
+        payload = json.loads(summary_json_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Lineage check failed: invalid bounty summary JSON ({summary_json_path})"
+        ) from exc
+
+    summary = payload.get("summary")
+    if not isinstance(summary, dict):
+        raise RuntimeError(
+            f"Lineage check failed: bounty summary JSON missing 'summary' object ({summary_json_path})"
+        )
+
+    total_images = int(summary.get("total_images", 0) or 0)
+    scored_images = int(summary.get("scored", 0) or 0)
+    missing_images = int(summary.get("missing", 0) or 0)
+    if total_images != 1000 or scored_images != 1000 or missing_images != 0:
+        raise RuntimeError(
+            "Lineage check failed: bounty summary image counts are invalid "
+            f"(total={total_images}, scored={scored_images}, missing={missing_images})"
+        )
+
+    csv_ids, csv_row_count, csv_duplicate_count, csv_score_sum = load_scored_csv_stats(scored_csv_path)
+    if csv_duplicate_count:
+        raise RuntimeError(
+            "Lineage check failed: duplicate image_id rows detected during summary consistency check "
+            f"(count={csv_duplicate_count})"
+        )
+    if csv_row_count != scored_images:
+        raise RuntimeError(
+            "Lineage check failed: scored CSV row count does not match bounty summary "
+            f"(csv_rows={csv_row_count}, summary_scored={scored_images})"
+        )
+
+    per_image = summary.get("per_image")
+    if isinstance(per_image, list) and per_image:
+        summary_ids = {str(item.get("image_id", "")).strip() for item in per_image if item.get("image_id")}
+        if len(summary_ids) != len(per_image):
+            raise RuntimeError(
+                "Lineage check failed: bounty summary contains duplicate/blank per_image IDs"
+            )
+        missing_ids = summary_ids - csv_ids
+        extra_ids = csv_ids - summary_ids
+        if missing_ids or extra_ids:
+            raise RuntimeError(
+                "Lineage check failed: scored CSV ID set does not match bounty summary ID set "
+                f"(missing_from_csv={len(missing_ids)} sample={_sample(missing_ids)} "
+                f"extra_in_csv={len(extra_ids)} sample={_sample(extra_ids)})"
+            )
+
+    summary_avg_score = float(summary.get("avg_score", 0.0) or 0.0)
+    csv_avg_score_normalized = (csv_score_sum / csv_row_count) / 100.0 if csv_row_count else 0.0
+    if abs(csv_avg_score_normalized - summary_avg_score) > 0.01:
+        raise RuntimeError(
+            "Lineage check failed: scored CSV mean does not match bounty summary mean "
+            f"(csv_avg_norm={csv_avg_score_normalized:.6f}, summary_avg={summary_avg_score:.6f})"
+        )
+
+    print(
+        "Bounty summary verified:"
+        f" rows={csv_row_count} avg_norm={csv_avg_score_normalized:.6f}"
+        f" request_id={payload.get('request_id')}"
+    )
+    return {
+        "csv_row_count": float(csv_row_count),
+        "csv_avg_score_normalized": csv_avg_score_normalized,
+        "summary_avg_score_normalized": summary_avg_score,
+    }
 
 
 def parse_bounty_request_id(summary_json: Path | None) -> str | None:
@@ -244,9 +459,12 @@ def main() -> None:
     zip_file = args.zip_file.expanduser().resolve()
     out_csv = args.out_csv.expanduser().resolve()
     out_csv.parent.mkdir(parents=True, exist_ok=True)
-    summary_path = args.out_summary_json.expanduser().resolve() if args.out_summary_json is not None else None
-    if summary_path is not None:
-        summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path = (
+        args.out_summary_json.expanduser().resolve()
+        if args.out_summary_json is not None
+        else out_csv.with_name(f"{out_csv.stem}_summary_autogen.json")
+    )
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
 
     candidate_name = args.candidate_name or zip_file.stem
     zip_sha = compute_sha256(zip_file)
@@ -283,6 +501,7 @@ def main() -> None:
             ledger_entry["candidate_name"] = candidate_name
             ledger_entry["artifact_path"] = str(zip_file)
             ledger_entry["sha256"] = zip_sha
+        reset_ledger_entry_run_state(ledger_entry)
         save_ledger(ledger_path, ledger)
 
     bounty_cmd = [
@@ -307,8 +526,7 @@ def main() -> None:
         "--request-timeout-sec",
         str(args.request_timeout_sec),
     ]
-    if summary_path is not None:
-        bounty_cmd.extend(["--out-summary-json", str(summary_path)])
+    bounty_cmd.extend(["--out-summary-json", str(summary_path)])
 
     run_checked(bounty_cmd)
     print(f"Bounty scoring complete: {out_csv}")
@@ -322,6 +540,27 @@ def main() -> None:
     if args.skip_kaggle_submit:
         print("Skipping Kaggle submit as requested.")
         return
+
+    lineage_metrics: dict[str, int] | None = None
+    summary_metrics: dict[str, float] | None = None
+    if args.allow_unverified_lineage:
+        print("WARNING: --allow-unverified-lineage set; skipping strict lineage verification.")
+        if ledger_path is not None and ledger is not None and ledger_entry is not None:
+            ledger_entry["lineage_verified"] = False
+            ledger_entry["lineage_verification_skipped"] = True
+            save_ledger(ledger_path, ledger)
+    else:
+        lineage_metrics = verify_submission_lineage(zip_file, out_csv)
+        summary_metrics = verify_csv_matches_bounty_summary(out_csv, summary_path)
+        if ledger_path is not None and ledger is not None and ledger_entry is not None:
+            ledger_entry["lineage_verified"] = True
+            ledger_entry["lineage_verification_skipped"] = False
+            ledger_entry["lineage_zip_jpg_count"] = lineage_metrics["zip_jpg_count"]
+            ledger_entry["lineage_csv_row_count"] = lineage_metrics["csv_row_count"]
+            ledger_entry["lineage_summary_avg_score_normalized"] = summary_metrics[
+                "summary_avg_score_normalized"
+            ]
+            save_ledger(ledger_path, ledger)
 
     message = args.message or build_default_message(zip_file)
     kaggle_cmd = [
@@ -337,6 +576,10 @@ def main() -> None:
     ]
     run_checked(kaggle_cmd)
     print("Kaggle submission command completed.")
+    if ledger_path is not None and ledger is not None and ledger_entry is not None:
+        ledger_entry["kaggle_submission_message"] = message
+        ledger_entry["kaggle_submit_invoked_at"] = datetime.utcnow().isoformat() + "Z"
+        save_ledger(ledger_path, ledger)
 
     row = fetch_latest_kaggle_row(
         competition=args.competition,
@@ -359,7 +602,6 @@ def main() -> None:
             public_score = row.get("publicScore")
             ledger_entry["kaggle_public_score"] = float(public_score) if public_score else None
             ledger_entry["kaggle_status"] = row.get("status")
-        ledger_entry["kaggle_submission_message"] = message
         save_ledger(ledger_path, ledger)
         print(f"Ledger updated: {ledger_path}")
 

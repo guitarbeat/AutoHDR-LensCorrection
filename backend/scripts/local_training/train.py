@@ -292,6 +292,12 @@ def parse_args() -> argparse.Namespace:
         "--max-val", type=int, default=None, help="Limit validation samples"
     )
     parser.add_argument(
+        "--init-checkpoint",
+        type=str,
+        default=None,
+        help="Initialize model weights from an existing checkpoint before training.",
+    )
+    parser.add_argument(
         "--overfit", action="store_true", help="Use same tiny split for train/val"
     )
     parser.add_argument("--save-every", type=int, default=10)
@@ -340,6 +346,24 @@ def main() -> None:
     model = model_class(in_channels=3, out_channels=3).to(device)
     param_count = sum(p.numel() for p in model.parameters())
     print(f"Model: {args.model} ({param_count:,} parameters)")
+
+    if args.init_checkpoint:
+        init_path = Path(args.init_checkpoint).expanduser().resolve()
+        if not init_path.exists():
+            raise FileNotFoundError(f"Init checkpoint not found: {init_path}")
+        init_payload = torch.load(init_path, map_location=device)
+        init_state = init_payload.get("model_state_dict")
+        if init_state is None:
+            raise KeyError(
+                f"Checkpoint missing model_state_dict: {init_path}"
+            )
+        model.load_state_dict(init_state)
+        init_epoch = init_payload.get("epoch")
+        init_val_loss = init_payload.get("val_loss")
+        print(
+            "Initialized model weights from "
+            f"{init_path} (epoch={init_epoch}, val_loss={init_val_loss})"
+        )
 
     criterion = CombinedLoss(l1_weight=1.0)
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
