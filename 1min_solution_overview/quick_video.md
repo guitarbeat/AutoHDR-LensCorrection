@@ -14,9 +14,9 @@
 |---|---|---|---|
 | 1 | Problem + rule | "Lens correction under competition constraints" and `ZIP -> bounty -> scored CSV -> Kaggle` | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_01_score_progression.png` |
 | 2 | Method science | Brown-Conrady undistortion + dimension-aware coefficient routing | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_05_before_after_example.png` |
-| 3 | What we tried | Baseline `30.14024` -> uplift `30.79062` -> top real tie `31.63214` | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_01_score_progression.png` |
-| 4 | Why top solution won | `max_per_image_across_inputs`, source mix `572/178/145/64/41`, failsafe8 patch `8` | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_02_top_source_mix.png` + `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_04_failsafe8_patch.png` |
-| 5 | Governance + recovery | Probe runs excluded; real claims require lineage + 1000-row ID integrity checks | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_03_real_vs_probe_counts.png` |
+| 3 | What moved score | Baseline `30.14024` -> fusion uplift `30.79062` -> top real tie `31.63214`; latest neutral-name real submit `31.63190` | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_01_score_progression.png` |
+| 4 | Why plateau remained | `max_per_image_across_inputs`, source mix `572/178/145/64/41`, hard-fail set fixed at `8` across rescue variants | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_02_top_source_mix.png` + `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_04_failsafe8_patch.png` |
+| 5 | Governance + closeout | Probe incident contained; real claims require lineage + 1000-row ID checks + naming safety policy | `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/figures/fig_03_real_vs_probe_counts.png` |
 
 ## 60-Second Script
 
@@ -26,11 +26,11 @@ Format: `MM:SS-MM:SS -> narration`
 
 `00:10-00:22` -> Method core: Brown-Conrady undistortion, then dimension-aware coefficient routing, because portraits, vertical crops, and extreme aspect ratios break when one global parameter set is reused.
 
-`00:22-00:35` -> What we tried: baseline `submission_v4.csv` at `30.14024`, conservative fallback variants that were robust but lower, then oracle-allbest fusion at `30.79062`, which finally broke the plateau.
+`00:22-00:35` -> What moved score: baseline `submission_v4.csv` at `30.14024`, then fusion uplift to `30.79062`, then the top real ZIP-backed tie at `31.63214`. Our latest neutral-name real submit landed `31.63190`.
 
-`00:35-00:48` -> Top real result tied at `31.63214` by selecting each image from the best ZIP-backed source using `max_per_image_across_inputs`, with source mix `572`, `178`, `145`, `64`, and `41`.
+`00:35-00:48` -> Top real result came from selecting each image from the best ZIP-backed source using `max_per_image_across_inputs`, with source mix `572`, `178`, `145`, `64`, and `41`.
 
-`00:48-01:00` -> Hangup moment: probe submissions happened, and I almost stress-tested the leaderboard the wrong way. Recovery was strict lineage plus `1000`-row ID checks, summary consistency checks, duplicate-SHA guardrails, and failsafe8 patching `8` risky IDs. `predicted_mean` `31.19849999999999` stayed estimate only.
+`00:48-01:00` -> Plateau root cause was a persistent hard-fail set of `8` IDs that stayed unchanged across rescue variants. We closed with strict governance: probe submissions excluded, lineage plus `1000`-row ID checks enforced, and safe naming policy on final submits.
 
 ## Final Checks
 
@@ -41,4 +41,6 @@ Format: `MM:SS-MM:SS -> narration`
 5. If you need proof lines while presenting, reference:
 `/Users/aaron/Desktop/AutoHDR/docs/ops/real_submission_lineage.md`,
 `/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/submission_v4_oracle_valid_allzip_20260222_175058_manifest.json`,
-`/Users/aaron/Desktop/AutoHDR/backend/outputs/kaggle/submission_v4_oracle_valid_allzip_failsafe8_20260222_122601_manifest.json`.
+`/Users/aaron/Desktop/AutoHDR/backend/outputs/kaggle/submission_v4_oracle_valid_allzip_failsafe8_20260222_122601_manifest.json`,
+`/Users/aaron/Desktop/AutoHDR/backend/outputs/kaggle/submission_realfusion_safeguard_m0p2_20260222_1258_summary.json`,
+`/Users/aaron/Desktop/AutoHDR/backend/outputs/kaggle/hardfail_rescue_manifest_20260222_124154.json`.
