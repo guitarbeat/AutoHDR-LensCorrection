@@ -232,12 +232,6 @@ Notes:
 2. Do not run concurrent submissions for the same zip; it can create duplicate bounty jobs.
 3. Optional CLI overrides still work: `--team-name`, `--email`, `--kaggle-username`, `--github-repo`.
 
-### 5.1.5 Kaggle leaderboard submission (after bounty CSV export)
-
-```bash
-kaggle competitions submit -c automatic-lens-correction -f submission.csv -m "Message"
-```
-
 ### 5.2 Local training / inference / evaluation
 
 ```bash
