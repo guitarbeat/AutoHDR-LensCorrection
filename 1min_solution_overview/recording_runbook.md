@@ -1,41 +1,36 @@
-# Recording Runbook (Science-First Overview)
+# Recording Runbook (Consolidated)
 
-## Build Order
+## Build Sequence
 
-1. Open `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/slides_outline.md`.
-2. Build the five slides with one scientific point per slide.
-3. Paste notes from `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/speaker_notes_by_slide.md`.
-4. Capture visuals listed in `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/shot_list.md`.
-5. Run fact-check gate using `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/evidence_table.md`.
+1. Read `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/story_and_science.md` for technical grounding.
+2. Build slides directly from `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/presentation_packet.md`.
+3. Capture visuals from `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/shot_list.md`.
+4. Verify each number/claim in `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/assets/evidence_table.md`.
 
-## Rehearsal Order
+## Rehearsal Sequence
 
-1. Rehearsal pass A: read exactly from `/Users/aaron/Desktop/AutoHDR/1min_solution_overview/script_60s.md`.
-2. Rehearsal pass B: deliver naturally with same technical nouns and numbers.
-3. Timing target: 55-65 seconds.
-4. Script word target: 130-150 words.
+1. Read the timestamped script in `presentation_packet.md` verbatim.
+2. Run a natural pass using the speaker notes in the same file.
+3. Timing gate: 55-65 seconds.
+4. Script gate: 130-150 words.
 
-## Fact-Check Gate (Must Pass Before Final Record)
+## Fact-Check Gate (Mandatory)
 
-1. Confirm all numeric claims in script/slides are listed in `assets/evidence_table.md`.
-2. Confirm top real score is stated as `31.63214`.
-3. Confirm `predicted_mean` is not presented as final leaderboard truth.
-4. Confirm probe references are explicitly labeled non-lineage.
-5. Confirm status timestamp wording is explicit: `2026-02-22 19:00:30 UTC`.
+1. Top real score appears as `31.63214`.
+2. Baseline and uplift references are correct (`30.14024`, `30.79062`).
+3. `predicted_mean 31.19849999999999` is clearly labeled as estimate.
+4. Probe rows (`constant100`, `constant200`) are explicitly non-lineage.
+5. Status timestamp is explicit where used (`2026-02-22 19:00:30 UTC`).
 
 ## Export Settings
 
-- Format: MP4
-- Resolution: 1920x1080
-- Frame rate: 30 fps
-- Audio: AAC, 44.1 kHz or 48 kHz
-- File name: `autohdr_1min_solution_overview_v1.mp4`
+- MP4, 1920x1080, 30 fps, AAC audio.
+- Output name: `autohdr_1min_solution_overview_v1.mp4`.
 
 ## Retake Triggers
 
-Retake if any of the following occurs:
-- Wrong score, wrong date, or missing timestamp.
-- Predicted-vs-real distinction is unclear.
-- Real-vs-probe distinction is omitted.
-- Runtime is outside 55-65 seconds.
-- On-screen text is unreadable.
+- Any wrong numeric value or timestamp.
+- Predicted-vs-real confusion.
+- Missing real-vs-probe separation.
+- Runtime outside 55-65 seconds.
+- Unclear on-slide readability.
