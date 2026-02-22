@@ -1,0 +1,75 @@
+{
+  "builds": [
+    {
+      "args": {
+        "max_dims": 12,
+        "min_dim_support": 50,
+        "sample_per_dim": 60,
+        "scale": 0.25,
+        "seed": 42,
+        "train_dir": "/Volumes/Love SSD/lens-correction-train-cleaned"
+      },
+      "dimensions_tuned": 12,
+      "git_commit": "7eb6b3125b1085bddb21b5d4a24e2bf497a3ce63",
+      "table_path": "/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/calibguard_dim_table.json",
+      "table_sha256": "1e2b78db39cf64c96f19186566a44c10471d1998f11a16c77491e5a0f5e44725",
+      "timestamp": "2026-02-22T10:22:13.546139Z"
+    }
+  ],
+  "runs": [
+    {
+      "artifact_path": "/private/tmp/autohdr_calibguard_smoke/submission_calibguard_dim_safe_20260222_091453.zip",
+      "artifact_tag": "calibguard_dim",
+      "command": "/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/heuristic_calibguard_dim.py --table /Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/calibguard_dim_table.json --manifest /Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/calibguard_dim_manifest.json --profile safe --output-dir /tmp/autohdr_calibguard_smoke --artifact-tag calibguard_dim --limit 25",
+      "git_commit": "b6e0efc8e463aeafc01e3bcfdbc568c50963d0ac",
+      "parent_counts": {
+        "near_standard_short": 2,
+        "standard": 23
+      },
+      "profile": "safe",
+      "route_counts": {
+        "parent_safe": 25
+      },
+      "table_path": "/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/calibguard_dim_table.json",
+      "table_sha256": "ef089a7cb4e944fdde740a1cb870fa777bd41d802cd100c782f98ad5bf7185d1",
+      "test_images": 25,
+      "timestamp": "2026-02-22T09:14:55.120374Z"
+    },
+    {
+      "artifact_path": "/Volumes/Love SSD/AutoHDR_Submissions/submission_calibguard_cycle1_safe_20260222_102221.zip",
+      "artifact_tag": "calibguard_cycle1",
+      "border_mode_counts": {
+        "constant": 1000
+      },
+      "cli_border_mode_override": null,
+      "cli_interp_override": null,
+      "command": "/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/heuristic_calibguard_dim.py --profile safe --artifact-tag calibguard_cycle1",
+      "git_commit": "7eb6b3125b1085bddb21b5d4a24e2bf497a3ce63",
+      "interp_counts": {
+        "linear": 1000
+      },
+      "model_counts": {
+        "brown": 1000
+      },
+      "parent_counts": {
+        "heavy_crop": 21,
+        "moderate_crop": 68,
+        "near_standard_short": 341,
+        "near_standard_tall": 94,
+        "portrait_cropped": 6,
+        "portrait_standard": 3,
+        "standard": 467
+      },
+      "profile": "safe",
+      "route_counts": {
+        "dim_safe": 978,
+        "parent_safe": 22
+      },
+      "table_path": "/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/calibguard_dim_table.json",
+      "table_sha256": "1e2b78db39cf64c96f19186566a44c10471d1998f11a16c77491e5a0f5e44725",
+      "test_images": 1000,
+      "timestamp": "2026-02-22T10:23:57.008538Z"
+    }
+  ],
+  "version": "calibguard_dim_manifest.v1"
+}

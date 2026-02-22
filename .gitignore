@@ -3,7 +3,6 @@ node_modules/
 .next/
 out/
 build/
-.env*
 
 # Python
 __pycache__/
@@ -13,6 +12,8 @@ venv/
 .venv/
 env/
 .env
+.env.*
+!.env.example
 
 # OS
 .DS_Store
@@ -27,3 +28,16 @@ kaggle.json
 data/
 *.zip
 *.7z
+
+# Generated outputs (large)
+backend/outputs/corrected_*/
+backend/outputs/*.csv
+backend/outputs/bounty/
+
+# Local scored exports / scratch analysis
+tab*-submission.csv
+scored_*.csv
+execution_brain.md
+backend/scripts/heuristics/pending_variant_diff_analysis.json
+backend/scripts/heuristics/tab_submission_analysis_*.json
+logs/akash_matrix_*.json
