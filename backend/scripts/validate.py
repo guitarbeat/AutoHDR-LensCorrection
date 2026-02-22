@@ -13,6 +13,7 @@ from evaluation.metrics import evaluate_metrics
 from core.distortion import undistort_image
 from models.detector import load_model
 from core.hardware import system_hardware
+from core.inference import predict_distortion_coefficients
 import torch
 
 def generate_dummy_image(w=800, h=600):
@@ -54,15 +55,7 @@ def run_validation_suite(num_images=5):
         distorted_img = generate_dummy_image()
         
         # 2. Predict Model Coefficients on Tensor Device
-        img_tensor = torch.from_numpy(distorted_img).permute(2, 0, 1).unsqueeze(0).float() / 255.0
-        img_tensor = img_tensor.to(tensor_device)
-        with torch.no_grad():
-            img_resized = torch.nn.functional.interpolate(img_tensor, size=(224, 224))
-            predicted_coeffs = detector(img_resized)[0].cpu().numpy().tolist()
-            
-        # Ensure some mild coefficients for verification
-        if abs(predicted_coeffs[0]) < 0.01:
-            predicted_coeffs = [-0.1, 0.05, 0.0, 0.0, 0.0]
+        predicted_coeffs = predict_distortion_coefficients(distorted_img, detector)
 
         # 3. Apply Correction Pipeline on I/O Device / standard numpy runtime
         corrected_img, info = undistort_image(distorted_img, predicted_coeffs)
@@ -77,14 +70,12 @@ def run_validation_suite(num_images=5):
     df = pd.DataFrame(results)
     
     # Calculate geometric accuracy averages
+    # Note: validation keys updated to match evaluate_metrics outputs
     summary = {
-        "mean_edge_alignment": df['edge_alignment'].mean(),
-        "mean_line_straightness": df['line_straightness'].mean(),
-        "mean_gradient_orientation": df['gradient_orientation'].mean(),
-        "mean_structural_similarity": df['structural_similarity'].mean(),
-        "mean_pixel_accuracy": df['pixel_accuracy'].mean(),
-        "mean_psnr": df['psnr'].mean(),
-        "mean_rpe": df['rpe'].mean(),
+        "mean_structural_similarity": float(df['ssim'].mean()),
+        "mean_psnr": float(df['psnr'].mean()),
+        "mean_mae": float(df['mae'].mean()),
+        "mean_estimated_kaggle_score": float(df['estimated_kaggle_score'].mean())
     }
     
     print("\nAggregate Verification Metrics:")

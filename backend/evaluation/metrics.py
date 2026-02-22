@@ -22,7 +22,7 @@ def calculate_psnr(img1: np.ndarray, img2: np.ndarray) -> float:
     if mse == 0:
         return 100.0
     pixel_max = 255.0
-    return 20 * np.log10(pixel_max / np.sqrt(mse))
+    return float(20 * np.log10(pixel_max / np.sqrt(mse)))
 
 def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
     """
