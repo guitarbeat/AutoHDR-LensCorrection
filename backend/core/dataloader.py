@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from torchvision import transforms
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
 
 class AutoHDRDataset(Dataset):
     """
@@ -24,43 +24,30 @@ class AutoHDRDataset(Dataset):
          img_1.jpg
          ...
     """
-    def __init__(self, root_dir: str, mode: str = "train", transform: Optional[transforms.Compose] = None):
+    def __init__(self, root_dir: str, mode: str = "train", transform: Optional[transforms.Compose] = None, samples: Optional[List[Dict[str, Any]]] = None):
         """
         Args:
             root_dir (str): Path to the extracted Kaggle dataset (e.g., /Volumes/Love SSD/automatic-lens-correction)
             mode (str): "train", "val", or "test"
             transform (callable, optional): Optional transform to be applied on an image.
+            samples (list, optional): Pre-computed list of samples. If provided, skips directory scanning.
         """
         self.root_dir = root_dir
         self.mode = mode
         self.transform = transform
         
+        if samples is not None:
+            self.samples = samples
+            return
+
         self.samples = []
         
         if mode in ["train", "val"]:
-            train_dir = os.path.join(root_dir, "train")
-            if os.path.exists(train_dir):
-                # Using a sorted list of directories to ensure deterministic ordering
-                # for train/val splits
-                pair_dirs = sorted([
-                    d for d in os.listdir(train_dir) 
-                    if os.path.isdir(os.path.join(train_dir, d))
-                ])
-                
-                # Simple split: 95% train, 5% val
-                split_idx = int(len(pair_dirs) * 0.95)
-                
-                if mode == "train":
-                    target_dirs = pair_dirs[:split_idx]
-                else:
-                    target_dirs = pair_dirs[split_idx:]
-                    
-                for d in target_dirs:
-                    pair_path = os.path.join(train_dir, d)
-                    self.samples.append({
-                        "original": os.path.join(pair_path, "original.jpg"),
-                        "generated": os.path.join(pair_path, "generated.jpg")
-                    })
+            train_samples, val_samples = self.prepare_train_val_samples(root_dir)
+            if mode == "train":
+                self.samples = train_samples
+            else:
+                self.samples = val_samples
         elif mode == "test":
             test_dir = os.path.join(root_dir, "test")
             if os.path.exists(test_dir):
@@ -70,6 +57,46 @@ class AutoHDRDataset(Dataset):
                             "original": os.path.join(test_dir, f),
                             "image_id": f.replace(".jpg", "")
                         })
+
+    @staticmethod
+    def prepare_train_val_samples(root_dir: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Scans the 'train' directory, sorts the subdirectories, and splits them into train and validation sets.
+        Returns:
+            Tuple containing (train_samples, val_samples)
+        """
+        train_samples = []
+        val_samples = []
+        train_dir = os.path.join(root_dir, "train")
+
+        if os.path.exists(train_dir):
+            # Using a sorted list of directories to ensure deterministic ordering
+            # for train/val splits
+            pair_dirs = sorted([
+                d for d in os.listdir(train_dir)
+                if os.path.isdir(os.path.join(train_dir, d))
+            ])
+
+            # Simple split: 95% train, 5% val
+            split_idx = int(len(pair_dirs) * 0.95)
+
+            train_target_dirs = pair_dirs[:split_idx]
+            val_target_dirs = pair_dirs[split_idx:]
+
+            def build_samples(dirs):
+                s = []
+                for d in dirs:
+                    pair_path = os.path.join(train_dir, d)
+                    s.append({
+                        "original": os.path.join(pair_path, "original.jpg"),
+                        "generated": os.path.join(pair_path, "generated.jpg")
+                    })
+                return s
+
+            train_samples = build_samples(train_target_dirs)
+            val_samples = build_samples(val_target_dirs)
+
+        return train_samples, val_samples
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -106,8 +133,11 @@ def get_dataloaders(root_dir: str, batch_size: int = 16, num_workers: int = 4) -
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
     
-    train_dataset = AutoHDRDataset(root_dir, mode="train", transform=vit_transform)
-    val_dataset = AutoHDRDataset(root_dir, mode="val", transform=vit_transform)
+    # Use the static method to scan once and get both sets
+    train_samples, val_samples = AutoHDRDataset.prepare_train_val_samples(root_dir)
+
+    train_dataset = AutoHDRDataset(root_dir, mode="train", transform=vit_transform, samples=train_samples)
+    val_dataset = AutoHDRDataset(root_dir, mode="val", transform=vit_transform, samples=val_samples)
     test_dataset = AutoHDRDataset(root_dir, mode="test", transform=vit_transform)
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
