@@ -1,9 +1,13 @@
-# Deprecated: Use plan.md
+# Deprecated: Use Dashboard + Log
 
-This file is retained only as a pointer for older workflows.
+This file is retained only as a pointer for prior agent workflows.
 
-Canonical source of truth:
+Canonical docs:
 
-- `/Users/aaron/Desktop/AutoHDR/plan.md`
+- Live dashboard: `/Users/aaron/Desktop/AutoHDR/plan.md`
+- Append-only operations log: `/Users/aaron/Desktop/AutoHDR/docs/ops/log.md`
 
-All runbook updates, scored-result analysis, and promotion decisions must be recorded in `plan.md`.
+Agent handoff rule:
+
+- Update `plan.md` for live operational state.
+- Append evidence, postmortems, and scored-run notes to `docs/ops/log.md`.

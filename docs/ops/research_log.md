@@ -1,15 +1,13 @@
-# Deprecated: Use plan.md
+# Deprecated: Use Dashboard + Log
 
-This file is no longer an active operations log.
+This file is retained as a pointer for older workflows.
 
-Canonical source of truth:
+Canonical docs:
 
-- `/Users/aaron/Desktop/AutoHDR/plan.md`
+- Live dashboard: `/Users/aaron/Desktop/AutoHDR/plan.md`
+- Append-only operations log: `/Users/aaron/Desktop/AutoHDR/docs/ops/log.md`
 
-Why:
+Policy:
 
-- We consolidated run status, submission history, forensics, decision gates, and execution logs into one document to avoid agent drift.
-
-Agent handoff rule:
-
-- When updating project status or decisions, edit `plan.md` only.
+- Current status, gates, and next actions belong in `plan.md`.
+- Long-form history, forensics, and run-by-run notes belong in `docs/ops/log.md`.
