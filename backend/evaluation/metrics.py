@@ -40,8 +40,14 @@ def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
     var1 = np.var(img1)
     var2 = np.var(img2)
     
-    # Flatten across color channels to compute covariance
-    cov = np.cov(img1.flatten(), img2.flatten())[0][1]
+    # Calculate covariance efficiently without flattening
+    # cov(X, Y) = E[XY] - E[X]E[Y]
+    # We apply Bessel's correction (n / (n - 1)) to match np.cov's default behavior (ddof=1)
+    n = img1.size
+    if n > 1:
+        cov = (np.mean(img1 * img2) - mu1 * mu2) * (n / (n - 1))
+    else:
+        cov = 0.0
     
     c1 = (0.01 * 255)**2
     c2 = (0.03 * 255)**2
