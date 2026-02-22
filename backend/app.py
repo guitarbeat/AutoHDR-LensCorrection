@@ -35,7 +35,7 @@ def read_root():
 async def correct_image(file: UploadFile = File(...)):
     # Read the uploaded image
     contents = await file.read()
-    nparr = np.fromstring(contents, np.uint8)
+    nparr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
     # 1. Prediction Model (Vision Transformer)
