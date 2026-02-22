@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from evaluation.metrics import evaluate_metrics
 from core.distortion import undistort_image
-from models.detector import load_model
+from models.detector import load_model, predict_distortion_parameters
 from core.hardware import system_hardware
 import torch
 
@@ -54,15 +54,7 @@ def run_validation_suite(num_images=5):
         distorted_img = generate_dummy_image()
         
         # 2. Predict Model Coefficients on Tensor Device
-        img_tensor = torch.from_numpy(distorted_img).permute(2, 0, 1).unsqueeze(0).float() / 255.0
-        img_tensor = img_tensor.to(tensor_device)
-        with torch.no_grad():
-            img_resized = torch.nn.functional.interpolate(img_tensor, size=(224, 224))
-            predicted_coeffs = detector(img_resized)[0].cpu().numpy().tolist()
-            
-        # Ensure some mild coefficients for verification
-        if abs(predicted_coeffs[0]) < 0.01:
-            predicted_coeffs = [-0.1, 0.05, 0.0, 0.0, 0.0]
+        predicted_coeffs = predict_distortion_parameters(detector, distorted_img, tensor_device)
 
         # 3. Apply Correction Pipeline on I/O Device / standard numpy runtime
         corrected_img, info = undistort_image(distorted_img, predicted_coeffs)
