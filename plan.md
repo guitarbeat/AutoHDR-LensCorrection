@@ -53,6 +53,12 @@ Use `/Users/aaron/Desktop/AutoHDR/docs/ops/real_submission_lineage.md` as the so
 6. `organize_real_chain --skip-kaggle` no longer requires `--kaggle-dir` to exist, enabling local-only reconciliation runs.
 7. Duplicate SHA guard in `/Users/aaron/Desktop/AutoHDR/backend/scripts/bounty_to_kaggle_submit.py` now keys off prior Kaggle submission metadata (not bounty request ID alone), so bounty-success/Kaggle-failed retries are not blocked.
 8. Kaggle naming safety policy is now enforced in `/Users/aaron/Desktop/AutoHDR/backend/scripts/bounty_to_kaggle_submit.py`: default block on risky name tokens (`oracle`, `probe`, `constant`) in file name/message unless `--allow-risky-name` is explicitly set.
+9. Naming policy for all new submissions is now `realfusion`-first:
+   - zip: `submission_realfusion_<family>_<params>_<YYYYMMDD_HHMM>.zip`
+   - scored csv: `submission_realfusion_<family>_<params>_<YYYYMMDD_HHMM>_scored.csv`
+   - message: `real zip fusion <family> <params> <tag>`
+   - submit script now auto-sanitizes risky tokens in `--out-csv`, `--candidate-name`, and `--message` before Kaggle submit (strict validation still runs afterward).
+10. Variant builder command surface is renamed to `/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/build_real_fusion_variants.py`; legacy `/Users/aaron/Desktop/AutoHDR/backend/scripts/heuristics/build_real_oracle_variants.py` remains as a compatibility wrapper only.
 
 ## Narrative Preservation (Do Not Drop History)
 

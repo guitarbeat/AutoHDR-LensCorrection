@@ -8,6 +8,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -25,6 +26,12 @@ except Exception:  # pragma: no cover - optional at runtime
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BOUNTY_SUBMIT_SCRIPT = Path(__file__).resolve().with_name("bounty_submit.py")
+RISKY_NAME_TOKENS = ("oracle", "probe", "constant")
+SAFE_TOKEN_REPLACEMENTS = {
+    "oracle": "fusion",
+    "probe": "eval",
+    "constant": "stabilized",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -138,6 +145,14 @@ def parse_args() -> argparse.Namespace:
         default=10.0,
         help="Polling interval for Kaggle submission metadata.",
     )
+    parser.add_argument(
+        "--allow-risky-name",
+        action="store_true",
+        help=(
+            "Allow risky tokens like oracle/probe/constant in Kaggle names/messages. "
+            "By default names are auto-sanitized, then strictly validated."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -153,7 +168,49 @@ def run_checked(cmd: list[str], capture_output: bool = False) -> subprocess.Comp
 
 def build_default_message(zip_path: Path) -> str:
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return f"Auto submission from {zip_path.name} at {ts}"
+    stem = sanitize_risky_tokens(zip_path.stem)
+    return f"Auto submission from {stem}.zip at {ts}"
+
+
+def sanitize_risky_tokens(value: str) -> str:
+    sanitized = value
+    for risky, replacement in SAFE_TOKEN_REPLACEMENTS.items():
+        sanitized = re.sub(re.escape(risky), replacement, sanitized, flags=re.IGNORECASE)
+    return sanitized
+
+
+def maybe_sanitize_field(*, value: str, label: str, allow_risky_name: bool) -> str:
+    if allow_risky_name:
+        return value
+    sanitized = sanitize_risky_tokens(value)
+    if sanitized != value:
+        print(f"[naming] sanitized {label}: {value} -> {sanitized}")
+    return sanitized
+
+
+def enforce_safe_naming(
+    *,
+    csv_name: str,
+    message: str,
+    candidate_name: str,
+    allow_risky_name: bool,
+) -> None:
+    if allow_risky_name:
+        return
+    checks = [
+        ("csv file name", csv_name.lower()),
+        ("submission message", message.lower()),
+        ("candidate name", candidate_name.lower()),
+    ]
+    for label, value in checks:
+        for token in RISKY_NAME_TOKENS:
+            if token in value:
+                raise RuntimeError(
+                    "Naming policy blocked Kaggle submit: "
+                    f"{label} contains risky token '{token}'. "
+                    "Use neutral naming (for example 'fusion', 'stabilized', 'blend') "
+                    "or pass --allow-risky-name to override."
+                )
 
 
 def compute_sha256(path: Path) -> str:
@@ -458,6 +515,13 @@ def main() -> None:
     args = parse_args()
     zip_file = args.zip_file.expanduser().resolve()
     out_csv = args.out_csv.expanduser().resolve()
+    sanitized_out_csv_name = maybe_sanitize_field(
+        value=out_csv.name,
+        label="--out-csv name",
+        allow_risky_name=args.allow_risky_name,
+    )
+    if sanitized_out_csv_name != out_csv.name:
+        out_csv = out_csv.with_name(sanitized_out_csv_name)
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     summary_path = (
         args.out_summary_json.expanduser().resolve()
@@ -467,6 +531,11 @@ def main() -> None:
     summary_path.parent.mkdir(parents=True, exist_ok=True)
 
     candidate_name = args.candidate_name or zip_file.stem
+    candidate_name = maybe_sanitize_field(
+        value=candidate_name,
+        label="candidate name",
+        allow_risky_name=args.allow_risky_name,
+    )
     zip_sha = compute_sha256(zip_file)
 
     ledger_path = args.ledger_path.expanduser().resolve() if args.ledger_path is not None else None
@@ -563,6 +632,17 @@ def main() -> None:
             save_ledger(ledger_path, ledger)
 
     message = args.message or build_default_message(zip_file)
+    message = maybe_sanitize_field(
+        value=message,
+        label="submission message",
+        allow_risky_name=args.allow_risky_name,
+    )
+    enforce_safe_naming(
+        csv_name=out_csv.name,
+        message=message,
+        candidate_name=candidate_name,
+        allow_risky_name=args.allow_risky_name,
+    )
     kaggle_cmd = [
         "kaggle",
         "competitions",
