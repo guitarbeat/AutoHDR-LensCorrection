@@ -41,7 +41,7 @@ def calculate_ssim(img1: np.ndarray, img2: np.ndarray) -> float:
     var2 = np.var(img2)
     
     # Flatten across color channels to compute covariance
-    cov = np.cov(img1.flatten(), img2.flatten())[0][1]
+    cov = np.cov(img1.flatten(), img2.flatten(), bias=True)[0][1]
     
     c1 = (0.01 * 255)**2
     c2 = (0.03 * 255)**2
