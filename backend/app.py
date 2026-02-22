@@ -27,15 +27,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
+
 @app.get("/")
 def read_root():
     return {"status": "AutoHDR API is running", "message": "Ready to correct distortions"}
 
 @app.post("/correct")
 async def correct_image(file: UploadFile = File(...)):
-    # Read the uploaded image
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
+    # Read the uploaded image with size limit
+    content = bytearray()
+    size = 0
+    while True:
+        chunk = await file.read(1024 * 1024)  # Read 1MB chunks
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
+        content.extend(chunk)
+
+    nparr = np.frombuffer(content, np.uint8)
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     if image is None:
